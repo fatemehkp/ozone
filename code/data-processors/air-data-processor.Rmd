@@ -1,0 +1,212 @@
+---
+title: "Air Quality Data - Ozone"
+author: "Fatemeh Kazemi"
+date: "01-15-2021"
+output:
+  html_document:
+    df_print: paged
+---
+
+#### To Do:
+#      Merge it with CMS
+###############################################################################
+
+### This program:
+  (1) Downloads and cleans hourly and 8hour ozone data measured by EPA
+      i. https://aqs.epa.gov/aqsweb/airdata/download_files.html
+  (2) Choose a subset of monitors on the basis of data availability
+      i. 18hours - 21days - 5 warm-month- 4years
+  (3) Constructs three measures of ozone including:
+      i. daily 1-h max
+      ii. daily 24-h avg
+      iii. daily 8-h max
+  (4) Calculates warm-season average of each ozone measure
+  (5) Uses cross-walk files between Sites and Zipcodes to assign the measurements
+      from Sites to the Zipcodes in their x-mile bufferzone
+  (5) Merge it with CMS data (on NEU Cluster) to find the Sites which have
+      population living in their x-mile bufferzone
+
+```{r load packages}
+library(tidyverse)
+library(here)
+library(lubridate)
+```
+
+```{r Call Functions}
+source(here('code','data-processors','epa-air-data-download-function.R'))
+source(here('code','data-processors','air-data-processor-function.R'))
+```
+
+```{r load data}
+load('C:\\Users\\fkazem01\\Box\\Projects\\USA Spatial\\data\\processed\\state-region.RDa')
+load('C:\\Users\\fkazem01\\Box\\Projects\\PM Components\\data\\processed\\aqs-sites.RDa')
+```
+
+```{r EPA AQS Data Download}
+#Using EPA.AQS.download Function
+dt.ozone.h.raw <- EPA.AQS.download.h (period = "hourly", Index = c(44201),
+                        start = 2000, end = 2008)
+save(dt.ozone.h.raw, file = here('data', 'raw', 'ozone-hour-raw.RDa'))
+#Monitor.ID: Site.ID-POC
+
+monitor.ozone <- dt.ozone.h.raw %>% distinct(Monitor.ID) #1653
+site.ozone <- dt.ozone.h.raw %>% distinct(Site.ID)#1632
+```
+
+```{r EPA AQS Data Download}
+#Using EPA.AQS.download Function
+dt.ozone.8h.raw <- EPA.AQS.download.8h (period = "8hour", Index = c(44201),
+                        start = 2000, end = 2008)
+save(dt.ozone.8h.raw, file = here('data', 'raw', 'ozone-8hour-raw.RDa'))
+#Monitor.ID: Site.ID-POC
+
+monitor.ozone <- dt.ozone.8h.raw %>% distinct(Monitor.ID)#1654
+site.ozone <- dt.ozone.8h.raw %>% distinct(Site.ID) #1633
+```
+
+```{r Air quality data Process}
+# Find sites with at least 18hour, 4day, 9month and 4year
+# Using Air.Hourly.Process function
+dt.ozone.h.sel <- Air.Hourly.Process(dt = dt.ozone.h.raw, m1 = 4, m2 = 9,
+                                  h = 18, d = 21, m = 5, y = 4)
+save(dt.ozone.h.sel, file = here('data', 'processed', 'ozone-hour-selected.RDa'))
+
+#Calculate daily max and avg for hourly data
+dt.ozone.h <- dt.ozone.h.sel %>% 
+  group_by(Monitor.ID, Site.ID, POC, Date) %>% 
+  summarise(maxh = max(Sample.Measurement),
+            avgh = mean(Sample.Measurement))
+
+# We do not need to find sites again
+# Calculate daily max for 8-hour average data ...
+# ... and merge it with qualified hourly data
+dt.ozone.8h <- dt.ozone.8h.raw %>% 
+  group_by(Monitor.ID, Site.ID, POC, Date) %>% 
+  summarise(max8h = max(Mean.Including.All.Data))
+
+dt.ozone.day.sel <- left_join(dt.ozone.h, dt.ozone.8h)
+
+# POC: Parameter Occurrence Code ...
+# ... more than one instrument measured ozone at one site
+# Pick the POC(instrument) with larger number of measurements
+site.POC.larger <- dt.ozone.day.sel %>% 
+  group_by(Site.ID, POC) %>% 
+  summarise(n = n()) %>% 
+  group_by(Site.ID) %>% 
+  filter(n == max (n)) %>% 
+  select(Site.ID, POC)
+
+dt.ozone.day.sel <- merge(dt.ozone.day.sel, site.POC.larger) %>% 
+   arrange(Site.ID, Date)
+
+monitor.ozone <- dt.ozone.day.sel %>% distinct(Monitor.ID) #1654 > 1271
+site.ozone <- dt.ozone.day.sel %>% distinct(Site.ID) #1632 > 1271
+
+dt.ozone.day.sel$POC <- dt.ozone.day.sel$Monitor.ID <- NULL
+save(dt.ozone.day.sel, file = here('data', 'processed', 'ozone-day-selected.RDa'))
+```
+
+```{r Caluculating warm-season avg for each year}
+dt.ozone.warm <- dt.ozone.day.sel %>% 
+  mutate(Year = year(Date)) %>% 
+  group_by(Site.ID, Year) %>% 
+  summarise(O3.maxh = mean(maxh, na.rm = T),
+            O3.avgh = mean(avgh,  na.rm = T),
+            O3.max8h = mean (max8h, na.rm = T))
+
+save(dt.ozone.warm, file = here('data', 'processed', 'ozone-warm.RDa'))
+
+dt.site.ozone.warm <- dt.ozone.warm %>% distinct(Site.ID) %>%  #1271
+  merge(dt.aqs.sites)
+save(dt.site.ozone.warm, file = here('data', 'processed', 'site-ozone-warm.RDa'))
+
+dt.site.ozone.warm %>% 
+  group_by(Location.Setting) %>% 
+  summarise(n = n())
+#Location.Setting  n
+#                  8			
+#RURAL	           564			
+#SUBURBAN	         493			
+#URBAN	           206	
+
+dt.ozone.warm %>% 
+  distinct(Site.ID, Year) %>% 
+  group_by(Site.ID) %>% 
+  summarise(n = n()) %>% filter(n > 4) %>% 
+  nrow() #1271: all  #1211: with 4+ years
+
+check <- dt.ozone.warm %>% 
+  group_by(Site.ID) %>% 
+  summarise(n = n()) %>% 
+  arrange(n)
+
+summary(check$n)
+```
+
+```{r Zipcodes in x-mile bufferzone of Monitoring Sites}
+# remove o3 measures for now to make the dataset smaller
+dt.ozone <- dt.ozone.warm %>% 
+  select(Site.ID, Year) %>% 
+  mutate(psuedo = 100)
+
+load('C:\\Users\\fkazem01\\Box\\Projects\\USA Spatial\\data\\processed\\site-zip.RDa')
+
+# joining zipcodes to monitoring sites
+dt.ozone <- dt.ozone %>% 
+  inner_join(dt.site.zip, by = c("Site.ID", "Year")) %>% 
+  arrange(Zip.Code, Year, Dist)
+
+# for each zipcode, pick the site with shorter distance to zipcode centroeid
+dt.site.dist.shorter <- dt.ozone %>% 
+  group_by(Zip.Code, Year) %>% 
+  filter(Dist == min (Dist)) %>% 
+  arrange(Zip.Code, Year) %>% 
+  as.data.frame()
+
+# 6-mile bufferzone around monitoring site
+dt.ozone.site.zip.bz6 <- dt.site.dist.shorter %>% 
+  filter(Dist <= 6) %>% 
+  select(Zip.Code, Year, Site.ID, psuedo)
+
+save(dt.ozone.site.zip.bz6, file = here('data', 'processed', 'ozone-site-zip-bz6.RDa'))
+write.csv(dt.ozone.site.zip.bz6, file = here('data', 'processed', 'ozone-site-zip-bz6.csv'))
+
+# Count number of zipcodes and sites
+dt.ozone.site.zip.bz6 %>% distinct(Zip.Code) %>% nrow() #10,903
+dt.ozone.site.zip.bz6 %>% distinct(Site.ID) %>% nrow() #1271 > 1224
+
+# ozone-site-zip-bz6.csv was uploaded on NEU Cluster to be merged with CMS data
+# It has 1224 sites with 10,903 zipcodes around them
+```
+
+```{r Not Yet - > Post mergeing with CMS Data}
+dt.site.ndi.bz12 <- read.csv(here('data', 'raw', 'site_ozone_ndi_bz12.csv')) %>% 
+  rename(Site.ID = Site_ID)
+
+# 325 out of 328 sites have population living in their 12-mile bufferzone
+dt.site.ndi.bz12 %>% 
+  group_by(Site.ID) %>% 
+  summarise(n = n()) %>% filter(n > 0) %>% 
+  nrow() # 325 > 317 > 316 > 308: with 4+ years
+
+# TOT/TOR Method in different location.set
+dt.site.ndi.bz12 %>% 
+  distinct(Site.ID) %>% 
+  left_join(dt.site.carbon.method) %>% 
+  left_join(dt.aqs.sites) %>% 
+  group_by(Location.Setting, Method) %>% 
+  summarise(n = n())
+
+# urban and suburban: TOT >> TOR
+# rural:              TOR >> TOT
+# improve sites only in rural
+
+dt.site.ndi.bz12 %>% 
+  distinct(Site.ID) %>% 
+  left_join(dt.aqs.sites) %>% 
+  group_by(Location.Setting) %>% 
+  summarise(n = n())
+# urban 72
+# suburban 69
+# rural 182
+```
