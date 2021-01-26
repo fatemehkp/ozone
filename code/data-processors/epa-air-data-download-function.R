@@ -22,8 +22,7 @@ EPA.AQS.download.h <- function(period, Index, start, end) {
       temp <- tempfile()
       download.file(paste("https://aqs.epa.gov/aqsweb/airdata/",period,"_",i,"_",t
                           ,".zip",sep = ""),temp)
-      dt0 <- read.csv(unz(temp, paste(period,"_",i,"_",t,".csv", sep = ""))) %>% 
-        mutate(State.Code = as.factor(State.Code))
+      dt0 <- read.csv(unz(temp, paste(period,"_",i,"_",t,".csv", sep = "")))
       dt <- rbind(dt, dt0)
     }
   }

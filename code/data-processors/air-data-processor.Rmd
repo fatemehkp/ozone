@@ -38,11 +38,14 @@ source(here('code','data-processors','air-data-processor-function.R'))
 ```
 
 ```{r load data}
-load('C:\\Users\\fkazem01\\Box\\Projects\\USA Spatial\\data\\processed\\state-region.RDa')
-load('C:\\Users\\fkazem01\\Box\\Projects\\PM Components\\data\\processed\\aqs-sites.RDa')
+dirUSSpatial <- 
+  'C:\\Users\\fkazem01\\Box\\Projects\\USA Spatial\\data\\processed\\'
+load(paste0(dirUSSpatial,'state-region.RDa'))
+load(paste0(dirUSSpatial,'site-zip.RDa'))
+load(here('data','processed','aqs-sites.RDa'))
 ```
 
-```{r EPA AQS Data Download}
+```{r EPA AQS Data Download - hourly data}
 #Using EPA.AQS.download Function
 dt.ozone.h.raw <- EPA.AQS.download.h (period = "hourly", Index = c(44201),
                         start = 2000, end = 2008)
@@ -53,7 +56,7 @@ monitor.ozone <- dt.ozone.h.raw %>% distinct(Monitor.ID) #1653
 site.ozone <- dt.ozone.h.raw %>% distinct(Site.ID)#1632
 ```
 
-```{r EPA AQS Data Download}
+```{r EPA AQS Data Download - 8hour data}
 #Using EPA.AQS.download Function
 dt.ozone.8h.raw <- EPA.AQS.download.8h (period = "8hour", Index = c(44201),
                         start = 2000, end = 2008)
@@ -69,7 +72,8 @@ site.ozone <- dt.ozone.8h.raw %>% distinct(Site.ID) #1633
 # Using Air.Hourly.Process function
 dt.ozone.h.sel <- Air.Hourly.Process(dt = dt.ozone.h.raw, m1 = 4, m2 = 9,
                                   h = 18, d = 21, m = 5, y = 4)
-save(dt.ozone.h.sel, file = here('data', 'processed', 'ozone-hour-selected.RDa'))
+save(dt.ozone.h.sel, 
+     file = here('data', 'processed', 'ozone-hour-selected.RDa'))
 
 #Calculate daily max and avg for hourly data
 dt.ozone.h <- dt.ozone.h.sel %>% 
@@ -103,7 +107,8 @@ monitor.ozone <- dt.ozone.day.sel %>% distinct(Monitor.ID) #1654 > 1271
 site.ozone <- dt.ozone.day.sel %>% distinct(Site.ID) #1632 > 1271
 
 dt.ozone.day.sel$POC <- dt.ozone.day.sel$Monitor.ID <- NULL
-save(dt.ozone.day.sel, file = here('data', 'processed', 'ozone-day-selected.RDa'))
+save(dt.ozone.day.sel, 
+     file = here('data', 'processed', 'ozone-day-selected.RDa'))
 ```
 
 ```{r Caluculating warm-season avg for each year}
@@ -118,7 +123,8 @@ save(dt.ozone.warm, file = here('data', 'processed', 'ozone-warm.RDa'))
 
 dt.site.ozone.warm <- dt.ozone.warm %>% distinct(Site.ID) %>%  #1271
   merge(dt.aqs.sites)
-save(dt.site.ozone.warm, file = here('data', 'processed', 'site-ozone-warm.RDa'))
+save(dt.site.ozone.warm, 
+     file = here('data', 'processed', 'site-ozone-warm.RDa'))
 
 dt.site.ozone.warm %>% 
   group_by(Location.Setting) %>% 
@@ -149,8 +155,6 @@ dt.ozone <- dt.ozone.warm %>%
   select(Site.ID, Year) %>% 
   mutate(psuedo = 100)
 
-load('C:\\Users\\fkazem01\\Box\\Projects\\USA Spatial\\data\\processed\\site-zip.RDa')
-
 # joining zipcodes to monitoring sites
 dt.ozone <- dt.ozone %>% 
   inner_join(dt.site.zip, by = c("Site.ID", "Year")) %>% 
@@ -168,8 +172,11 @@ dt.ozone.site.zip.bz6 <- dt.site.dist.shorter %>%
   filter(Dist <= 6) %>% 
   select(Zip.Code, Year, Site.ID, psuedo)
 
-save(dt.ozone.site.zip.bz6, file = here('data', 'processed', 'ozone-site-zip-bz6.RDa'))
-write.csv(dt.ozone.site.zip.bz6, file = here('data', 'processed', 'ozone-site-zip-bz6.csv'))
+save(dt.ozone.site.zip.bz6, 
+     file = here('data', 'processed', 'ozone-site-zip-bz6.RDa'))
+write.csv(dt.ozone.site.zip.bz6, 
+          file = here('data', 'processed', 'ozone-site-zip-bz6.csv'),
+          row.names = F)
 
 # Count number of zipcodes and sites
 dt.ozone.site.zip.bz6 %>% distinct(Zip.Code) %>% nrow() #10,903
