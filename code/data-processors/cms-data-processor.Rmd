@@ -1,0 +1,1424 @@
+---
+title: "Air Quality and CMS Data"
+author: "Fatemeh Kazemi"
+date: "2/07/2021"
+output: html_document
+---
+### This program:
+  (1) Merges CMS(ndi) data with ozone and ses data
+  
+### Note:
+  1. In data merged with CMS, bufferzone is 6-mile unless specified
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load packages}
+library(tidyverse)
+library(here)
+```
+
+```{r load data}
+dirUSSpatial <- 'C:\\Users\\fkazem01\\Box\\Projects\\USA Spatial\\data\\processed\\'
+load(paste0(dirUSSpatial,'ses-site-bz6.RDa'))
+load(paste0(dirUSSpatial,'ses-site-bz12.RDa'))
+load(paste0(dirUSSpatial,'ses-site-bz24.RDa'))
+load(paste0(dirUSSpatial,'brfss-site.RDa'))
+load(here('data','processed','master-ndi-ozone.RDa'))
+load(here('data','processed','master-ndi-ozone-race.RDa'))
+load(here('data','processed','master-ndi-ozone-bz6.RDa'))
+load(here('data','processed','master-ndi-ozone-bz12.RDa'))
+load(here('data','processed','master-ndi-ozone-bz24.RDa'))
+load(here('data','processed','ozone-site-ndi.RDa'))
+load(here('data','processed','ozone-warm.RDa'))
+load(here('data','processed','fac-1yr.RDa'))
+load(here('data','processed','fac-ex-ec-1yr.RDa'))
+load(here('data','processed','ozone-residual-1yr.RDa'))
+load(here('data','processed','fac-ex-ec-residual-1yr.RDa'))
+load(here('data','processed','ozone-sub-5yr.RDa'))
+load(here('data','processed','ozone-sub-4yr-5yr.RDa'))
+load(here('data','processed','ozone-sub-3yr-5yr.RDa'))
+load(here('data','processed','ozone-sub-2yr-5yr.RDa'))
+load(here('data','processed','ozone-sub-1yr-5yr.RDa'))
+```
+
+```{r Import and save CMS(/ndi) data}
+# bz = 6
+dt.master.ndi.ozone <- read.csv(
+  here('data', 'processed','master_ndi_ozone.csv')) %>% 
+  rename(Site.ID = Site_ID,
+         Year = year,
+         Month = MONTH,
+         age = ENROLLEE_AGE)
+save(dt.master.ndi.ozone, 
+     file = here('data', 'processed', 'master-ndi-ozone.RDa'))
+
+# bz =6 - race
+dt.master.ndi.ozone.race <- read.csv(
+  here('data', 'processed','master_ndi_ozone_race.csv')) %>%
+  rename(Site.ID = Site_ID,
+         Year = year,
+         Month = MONTH,
+         age = ENROLLEE_AGE)
+save(dt.master.ndi.ozone.race, 
+     file = here('data', 'processed', 'master-ndi-ozone-race.RDa'))
+
+# bz = 12 of sites of bz =6
+dt.master.ndi.ozone.bz12 <- read.csv(
+  here('data', 'processed','master_ndi_ozone_bz12.csv')) %>% 
+  rename(Site.ID = Site_ID,
+         Year = year,
+         Month = MONTH,
+         age = ENROLLEE_AGE)
+save(dt.master.ndi.ozone.bz12, 
+     file = here('data', 'processed', 'master-ndi-ozone-bz12.RDa'))
+
+# bz = 24 of sites of bz =6
+dt.master.ndi.ozone.bz24 <- read.csv(
+  here('data', 'processed','master_ndi_ozone_bz24.csv')) %>% 
+  rename(Site.ID = Site_ID,
+         Year = year,
+         Month = MONTH,
+         age = ENROLLEE_AGE)
+save(dt.master.ndi.ozone.bz24, 
+     file = here('data', 'processed', 'master-ndi-ozone-bz24.RDa'))
+```
+
+```{r ozone}
+dt.ozone <- 
+  rename_with(dt.ozone.warm, ~ gsub(".", "", .x, fixed = TRUE))
+
+dt.ses <- dt.ses.site.bz6 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.ndi.ozone <- dt.master.ndi.ozone %>% 
+  mutate(StrID = paste(age, sex, race)) %>% 
+  select(Site.ID, Year, Month, StrID, no_enrollee:no_death_kidn) %>%  
+  inner_join(dt.ozone.warm) %>% 
+  inner_join(dt.ses)
+
+dt.ndi.ozone <-
+  rename_with(dt.ndi.ozone, ~ gsub(".", "", .x, fixed = TRUE))
+
+save(dt.ndi.ozone, 
+     file = here('data', 'processed', 'ndi-ozone.RDa'))
+```
+
+
+
+
+
+
+
+```{r ozone Age}
+cmp.sub <- c("SE", "CA", "CL", "NA", "NI", "NO3", "OC", 
+             "PB", "PM", "SI", "SO4", "V", "ZN")
+
+dt.ozone <- dt.ozone.1yr %>% 
+  select(Site.ID, Year, Month, cmp.sub)
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+### Age 
+dt.age <- dt.master.ndi.ozone %>%
+  mutate(age = ifelse(age <= 75, "LE", "M")) %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_uri, -no_death_ards)
+
+dt.age <- 
+  aggregate(. ~ Site.ID + Year + Month + age + sex + race, dt.age, sum) %>%
+  arrange(Site.ID, Year, Month, age, sex, race)
+
+### LE 75
+dt.ndi.ozone.ageLE75 <- dt.age %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  mutate(aLE75 = ifelse(age == "LE", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.ageLE75[ ,paste0("aLE75_",cmp)] <- 
+      dt.ndi.ozone.ageLE75[ ,cmp] * dt.ndi.ozone.ageLE75$aLE75
+}
+
+dt.ndi.ozone.ageLE75 <- dt.ndi.ozone.ageLE75 %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, aLE75, everything())
+
+write.csv(dt.ndi.ozone.ageLE75, 
+          file = here('data', 'processed', 'ndi-ozone-ageLE75.csv'),
+          row.names = F)
+
+### M 75
+dt.ndi.ozone.ageM75 <- dt.age %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  mutate(aM75 = ifelse(age == "M", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.ageM75[ ,paste0("aM75_",cmp)] <- 
+      dt.ndi.ozone.ageM75[ ,cmp] * dt.ndi.ozone.ageM75$aM75
+}
+
+dt.ndi.ozone.ageM75 <- dt.ndi.ozone.ageM75 %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, aM75, everything())
+
+write.csv(dt.ndi.ozone.ageM75, 
+          file = here('data', 'processed', 'ndi-ozone-ageM75.csv'),
+          row.names = F)
+```
+
+```{r Factor Age}
+fac <- c("Factor1","Factor2","Factor3","Factor4",
+         "Factor5","Factor6","Factor7","Factor8")
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+### Age 
+dt.age <- dt.master.ndi.ozone %>%
+  mutate(age = ifelse(age <= 75, "LE", "M")) %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards)
+
+dt.age <- 
+  aggregate(. ~ Site.ID + Year + Month + age + sex + race, dt.age, sum) %>%
+  arrange(Site.ID, Year, Month, age, sex, race)
+
+### LE 75
+dt.ndi.fac.ageLE75 <- dt.age %>% 
+  inner_join(dt.fac.ex.ec.1yr) %>% 
+  inner_join(dt.ses) %>% 
+  mutate(aLE75 = ifelse(age == "LE", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in fac){
+    dt.ndi.fac.ageLE75[ ,paste0("aLE75_",cmp)] <- 
+      dt.ndi.fac.ageLE75[ ,cmp] * dt.ndi.fac.ageLE75$aLE75
+}
+
+dt.ndi.fac.ageLE75 <- dt.ndi.fac.ageLE75 %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, aLE75, everything())
+
+write.csv(dt.ndi.fac.ageLE75, 
+          file = here('data', 'processed', 'ndi-fac-ageLE75.csv'),
+          row.names = F)
+
+### M 75
+dt.ndi.fac.ageM75 <- dt.age %>% 
+  inner_join(dt.fac.ex.ec.1yr) %>% 
+  inner_join(dt.ses) %>% 
+  mutate(aM75 = ifelse(age == "M", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in fac){
+    dt.ndi.fac.ageM75[ ,paste0("aM75_",cmp)] <- 
+      dt.ndi.fac.ageM75[ ,cmp] * dt.ndi.fac.ageM75$aM75
+}
+
+dt.ndi.fac.ageM75 <- dt.ndi.fac.ageM75 %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, aM75, everything())
+
+write.csv(dt.ndi.fac.ageM75, 
+          file = here('data', 'processed', 'ndi-fac-ageM75.csv'),
+          row.names = F)
+```
+
+```{r ozone Sex}
+cmp.sub <- c("SE", "CA", "CL", "NA", "NI", "NO3", "OC", 
+             "PB", "PM", "SI", "SO4", "V", "ZN")
+
+dt.ozone <- dt.ozone.1yr %>% 
+  select(Site.ID, Year, Month, cmp.sub)
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.sex <- dt.master.ndi.ozone %>% 
+    select(Site.ID:no_death_lungc,
+         -no_death_uri, -no_death_ards) %>%  
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses)
+
+### Female
+dt.ndi.ozone.sexF <- dt.sex %>% 
+  mutate(sexF = ifelse(sex == "F", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.sexF[ ,paste0("sexF_",cmp)] <- 
+      dt.ndi.ozone.sexF[ ,cmp] * dt.ndi.ozone.sexF$sexF
+}
+
+dt.ndi.ozone.sexF <- dt.ndi.ozone.sexF %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, sexF, everything())
+
+write.csv(dt.ndi.ozone.sexF, 
+          file = here('data', 'processed', 'ndi-ozone-sexF.csv'),
+          row.names = F)
+
+### Male
+dt.ndi.ozone.sexM <- dt.sex %>% 
+  mutate(sexM = ifelse(sex == "M", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.sexM[ ,paste0("sexM_",cmp)] <- 
+      dt.ndi.ozone.sexM[ ,cmp] * dt.ndi.ozone.sexM$sexM
+}
+
+dt.ndi.ozone.sexM <- dt.ndi.ozone.sexM %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, sexM, everything())
+
+write.csv(dt.ndi.ozone.sexM, 
+          file = here('data', 'processed', 'ndi-ozone-sexM.csv'),
+          row.names = F)
+```
+
+```{r Factor Sex}
+fac <- c("Factor1","Factor2","Factor3","Factor4",
+         "Factor5","Factor6","Factor7","Factor8")
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.sex <- dt.master.ndi.ozone %>% 
+    select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards) %>%  
+  inner_join(dt.fac.ex.ec.1yr) %>% 
+  inner_join(dt.ses)
+
+### Female
+dt.ndi.fac.sexF <- dt.sex %>% 
+  mutate(sexF = ifelse(sex == "F", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in fac){
+    dt.ndi.fac.sexF[ ,paste0("sexF_",cmp)] <- 
+      dt.ndi.fac.sexF[ ,cmp] * dt.ndi.fac.sexF$sexF
+}
+
+dt.ndi.fac.sexF <- dt.ndi.fac.sexF %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, sexF, everything())
+
+write.csv(dt.ndi.fac.sexF, 
+          file = here('data', 'processed', 'ndi-fac-sexF.csv'),
+          row.names = F)
+
+### Male
+dt.ndi.fac.sexM <- dt.sex %>% 
+  mutate(sexM = ifelse(sex == "M", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in fac){
+    dt.ndi.fac.sexM[ ,paste0("sexM_",cmp)] <- 
+      dt.ndi.fac.sexM[ ,cmp] * dt.ndi.fac.sexM$sexM
+}
+
+dt.ndi.fac.sexM <- dt.ndi.fac.sexM %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, sexM, everything())
+
+write.csv(dt.ndi.fac.sexM, 
+          file = here('data', 'processed', 'ndi-fac-sexM.csv'),
+          row.names = F)
+```
+
+```{r ozone race}
+cmp.sub <- c("SE", "CA", "CL", "NA", "NI", "NO3", "OC", 
+             "PB", "PM", "SI", "SO4", "V", "ZN")
+
+dt.ozone <- dt.ozone.1yr %>% 
+  select(Site.ID, Year, Month, cmp.sub)
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+### Race Asian
+dt.raceA <- dt.master.ndi.ozone.race %>%
+  mutate(race = ifelse(!race == "A", "O", "A")) %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards)
+
+dt.raceA <- aggregate(. ~ Site.ID + Year + Month + age + sex + race, dt.raceA, sum) %>%
+  arrange(Site.ID, Year, Month, age, sex, race)
+
+dt.ndi.ozone.raceA <- dt.raceA %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  mutate(rA = ifelse(race == "A", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.raceA[ ,paste0("rA_",cmp)] <- 
+      dt.ndi.ozone.raceA[ ,cmp] * dt.ndi.ozone.raceA$rA
+}
+
+dt.ndi.ozone.raceA <- dt.ndi.ozone.raceA %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rA, everything())
+
+write.csv(dt.ndi.ozone.raceA, 
+          file = here('data', 'processed', 'ndi-ozone-raceA.csv'),
+          row.names = F)
+
+### Race Black
+dt.raceB <- dt.master.ndi.ozone.race %>%
+  mutate(race = ifelse(!race == "B", "O", "B")) %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards)
+
+dt.raceB <- 
+  aggregate(. ~ Site.ID + Year + Month + age + sex + race, dt.raceB, sum) %>%
+  arrange(Site.ID, Year, Month, age, sex, race)
+
+dt.ndi.ozone.raceB <- dt.raceB %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  mutate(rB = ifelse(race == "B", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.raceB[ ,paste0("rB_",cmp)] <- 
+      dt.ndi.ozone.raceB[ ,cmp] * dt.ndi.ozone.raceB$rB
+}
+
+dt.ndi.ozone.raceB <- dt.ndi.ozone.raceB %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rB, everything())
+
+write.csv(dt.ndi.ozone.raceB, 
+          file = here('data', 'processed', 'ndi-ozone-raceB.csv'),
+          row.names = F)
+
+### Race Hispanic
+dt.raceH <- dt.master.ndi.ozone.race %>%
+  mutate(race = ifelse(!race == "H", "O", "H")) %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards)
+
+dt.raceH <- 
+  aggregate(. ~ Site.ID + Year + Month + age + sex + race, dt.raceH, sum) %>%
+  arrange(Site.ID, Year, Month, age, sex, race)
+
+dt.ndi.ozone.raceH <- dt.raceH %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  mutate(rH = ifelse(race == "H", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.raceH[ ,paste0("rH_",cmp)] <- 
+      dt.ndi.ozone.raceH[ ,cmp] * dt.ndi.ozone.raceH$rH
+}
+
+dt.ndi.ozone.raceH <- dt.ndi.ozone.raceH %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rH, everything())
+
+write.csv(dt.ndi.ozone.raceH, 
+          file = here('data', 'processed', 'ndi-ozone-raceH.csv'),
+          row.names = F)
+
+
+### Race White
+dt.raceW <- dt.master.ndi.ozone.race %>%
+  mutate(race = ifelse(!race == "W", "O", "W")) %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards)
+
+dt.raceW <- 
+  aggregate(. ~ Site.ID + Year + Month + age + sex + race, dt.raceW, sum) %>%
+  arrange(Site.ID, Year, Month, age, sex, race)
+
+dt.ndi.ozone.raceW <- dt.raceW %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  mutate(rW = ifelse(race == "W", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.raceW[ ,paste0("rW_",cmp)] <- 
+      dt.ndi.ozone.raceW[ ,cmp] * dt.ndi.ozone.raceW$rW
+}
+
+dt.ndi.ozone.raceW <- dt.ndi.ozone.raceW %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rW, everything())
+
+write.csv(dt.ndi.ozone.raceW, 
+          file = here('data', 'processed', 'ndi-ozone-raceW.csv'),
+          row.names = F)
+```
+
+```{r Factor race}
+fac <- c("Factor1","Factor2","Factor3","Factor4",
+         "Factor5","Factor6","Factor7","Factor8")
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+### Race Asian
+dt.raceA <- dt.master.ndi.ozone.race %>%
+  mutate(race = ifelse(!race == "A", "O", "A")) %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards)
+
+dt.raceA <- 
+  aggregate(. ~ Site.ID + Year + Month + age + sex + race, dt.raceA, sum) %>%
+  arrange(Site.ID, Year, Month, age, sex, race)
+
+dt.ndi.fac.raceA <- dt.raceA %>% 
+  inner_join(dt.fac.ex.ec.1yr) %>% 
+  inner_join(dt.ses) %>% 
+  mutate(rA = ifelse(race == "A", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in fac){
+    dt.ndi.fac.raceA[ ,paste0("rA_",cmp)] <- 
+      dt.ndi.fac.raceA[ ,cmp] * dt.ndi.fac.raceA$rA
+}
+
+dt.ndi.fac.raceA <- dt.ndi.fac.raceA %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rA, everything())
+
+write.csv(dt.ndi.fac.raceA, 
+          file = here('data', 'processed', 'ndi-fac-raceA.csv'),
+          row.names = F)
+
+### Race Black
+dt.raceB <- dt.master.ndi.fac.race %>%
+  mutate(race = ifelse(!race == "B", "O", "B")) %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards)
+
+dt.raceB <- 
+  aggregate(. ~ Site.ID + Year + Month + age + sex + race, dt.raceB, sum) %>%
+  arrange(Site.ID, Year, Month, age, sex, race)
+
+dt.ndi.fac.raceB <- dt.raceB %>% 
+  inner_join(dt.fac.ex.ec.1yr) %>% 
+  inner_join(dt.ses) %>% 
+  mutate(rB = ifelse(race == "B", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in fac){
+    dt.ndi.fac.raceB[ ,paste0("rB_",cmp)] <- 
+      dt.ndi.fac.raceB[ ,cmp] * dt.ndi.fac.raceB$rB
+}
+
+dt.ndi.fac.raceB <- dt.ndi.fac.raceB %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rB, everything())
+
+write.csv(dt.ndi.fac.raceB, 
+          file = here('data', 'processed', 'ndi-fac-raceB.csv'),
+          row.names = F)
+
+### Race Hispanic
+dt.raceH <- dt.master.ndi.fac.race %>%
+  mutate(race = ifelse(!race == "H", "O", "H")) %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards)
+
+dt.raceH <- 
+  aggregate(. ~ Site.ID + Year + Month + age + sex + race, dt.raceH, sum) %>%
+  arrange(Site.ID, Year, Month, age, sex, race)
+
+dt.ndi.fac.raceH <- dt.raceH %>% 
+  inner_join(dt.fac.ex.ec.1yr) %>% 
+  inner_join(dt.ses) %>% 
+  mutate(rH = ifelse(race == "H", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in fac){
+    dt.ndi.fac.raceH[ ,paste0("rH_",cmp)] <- 
+      dt.ndi.fac.raceH[ ,cmp] * dt.ndi.fac.raceH$rH
+}
+
+dt.ndi.fac.raceH <- dt.ndi.fac.raceH %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rH, everything())
+
+write.csv(dt.ndi.fac.raceH, 
+          file = here('data', 'processed', 'ndi-fac-raceH.csv'),
+          row.names = F)
+
+
+### Race White
+dt.raceW <- dt.master.ndi.fac.race %>%
+  mutate(race = ifelse(!race == "W", "O", "W")) %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards)
+
+dt.raceW <- 
+  aggregate(. ~ Site.ID + Year + Month + age + sex + race, dt.raceW, sum) %>%
+  arrange(Site.ID, Year, Month, age, sex, race)
+
+dt.ndi.fac.raceW <- dt.raceW %>% 
+  inner_join(dt.fac.ex.ec.1yr) %>% 
+  inner_join(dt.ses) %>% 
+  mutate(rW = ifelse(race == "W", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race) 
+  
+for (cmp in fac){
+    dt.ndi.fac.raceW[ ,paste0("rW_",cmp)] <- 
+      dt.ndi.fac.raceW[ ,cmp] * dt.ndi.fac.raceW$rW
+}
+
+dt.ndi.fac.raceW <- dt.ndi.fac.raceW %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rW, everything())
+
+write.csv(dt.ndi.fac.raceW, 
+          file = here('data', 'processed', 'ndi-fac-raceW.csv'),
+          row.names = F)
+```
+
+```{r ozone urbanicity}
+cmp.sub <- c("SE", "CA", "CL", "NA", "NI", "NO3", "OC", 
+             "PB", "PM", "SI", "SO4", "V", "ZN")
+
+dt.ozone <- dt.ozone.1yr %>% 
+  select(Site.ID, Year, Month, cmp.sub)
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.site <- dt.ozone.site.ndi %>% 
+  select(Site.ID, Location.Setting)
+
+### Urban and Suburban
+dt.ndi.ozone.urban <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(urb = ifelse(!Location.Setting == "RURAL", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Location.Setting) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.urban[ ,paste0("urb_",cmp)] <- 
+      dt.ndi.ozone.urban[ ,cmp] * dt.ndi.ozone.urban$urb
+}
+
+dt.ndi.ozone.urban <- dt.ndi.ozone.urban %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, urb, everything())
+
+write.csv(dt.ndi.ozone.urban, 
+          file = here('data', 'processed', 'ndi-ozone-urban.csv'),
+          row.names = F)
+
+
+### Rural
+dt.ndi.ozone.rural <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(rur = ifelse(Location.Setting == "RURAL", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Location.Setting) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.rural[ ,paste0("rur_",cmp)] <- 
+      dt.ndi.ozone.rural[ ,cmp] * dt.ndi.ozone.rural$rur
+}
+
+dt.ndi.ozone.rural <- dt.ndi.ozone.rural %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rur, everything())
+
+write.csv(dt.ndi.ozone.rural, 
+          file = here('data', 'processed', 'ndi-ozone-rural.csv'),
+          row.names = F)
+```
+
+```{r Factor urbanicity}
+#fatemeh
+fac <- c("Factor1","Factor2","Factor3","Factor4",
+         "Factor5","Factor6","Factor7","Factor8")
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.site <- dt.ozone.site.ndi %>% 
+  select(Site.ID, Location.Setting)
+
+### Urban and Suburban
+dt.ndi.fac.urban <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.fac.ex.ec.1yr) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(urb = ifelse(!Location.Setting == "RURAL", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Location.Setting) 
+  
+for (cmp in fac){
+    dt.ndi.fac.urban[ ,paste0("urb_",cmp)] <- 
+      dt.ndi.fac.urban[ ,cmp] * dt.ndi.fac.urban$urb
+}
+
+dt.ndi.fac.urban <- dt.ndi.fac.urban %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, urb, everything())
+
+write.csv(dt.ndi.fac.urban, 
+          file = here('data', 'processed', 'ndi-fac-urban.csv'),
+          row.names = F)
+
+
+### Rural
+dt.ndi.fac.rural <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.fac.ex.ec.1yr) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(rur = ifelse(Location.Setting == "RURAL", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Location.Setting) 
+  
+for (cmp in fac){
+    dt.ndi.fac.rural[ ,paste0("rur_",cmp)] <- 
+      dt.ndi.fac.rural[ ,cmp] * dt.ndi.fac.rural$rur
+}
+
+dt.ndi.fac.rural <- dt.ndi.fac.rural %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rur, everything())
+
+write.csv(dt.ndi.fac.rural, 
+          file = here('data', 'processed', 'ndi-fac-rural.csv'),
+          row.names = F)
+```
+
+```{r r ozone urban SES Categories}
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.site.urban <- dt.ozone.site.ndi %>% 
+  filter(!Location.Setting == "RURAL") %>% 
+  select(Site.ID)
+
+dt.site.urban.ses.cat <- dt.site.urban %>% 
+  inner_join(dt.ses)
+
+qtl <- dt.site.urban.ses.cat %>% 
+  summarise(qtl = quantile(ses, c(0.33, 0.66)))
+
+dt.site.urban.ses.cat <- dt.site.urban.ses.cat %>% 
+  mutate(ses.cat = ifelse(ses < qtl[1,], "Low",
+                          ifelse(ses >qtl[1,] & ses < qtl[2,], "Mid", "High")))
+
+cmp.sub <- c("SE", "CA", "CL", "NA", "NI", "NO3", "OC", 
+             "PB", "PM", "SI", "SO4", "V", "ZN")
+
+dt.ozone <- dt.ozone.1yr %>% 
+  select(Site.ID, Year, Month, cmp.sub)
+
+### Low Income
+dt.ndi.ozone.urban.ses <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.site.urban.ses.cat) %>%  
+  mutate(sesL = ifelse(ses.cat == "Low", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -ses.cat) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.urban.ses[ ,paste0("sesL_",cmp)] <- 
+      dt.ndi.ozone.urban.ses[ ,cmp] * dt.ndi.ozone.urban.ses$sesL
+}
+
+dt.ndi.ozone.urban.sesL <- dt.ndi.ozone.urban.ses %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, sesL, everything())
+
+write.csv(dt.ndi.ozone.urban.sesL, 
+          file = here('data', 'processed', 'ndi-ozone-urban-sesL.csv'),
+          row.names = F)
+
+### Middle Income
+dt.ndi.ozone.urban.ses <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.site.urban.ses.cat) %>%  
+  mutate(sesM = ifelse(ses.cat == "Mid", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -ses.cat) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.urban.ses[ ,paste0("sesM_",cmp)] <- 
+      dt.ndi.ozone.urban.ses[ ,cmp] * dt.ndi.ozone.urban.ses$sesM
+}
+
+dt.ndi.ozone.urban.sesM <- dt.ndi.ozone.urban.ses %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, sesM, everything())
+
+write.csv(dt.ndi.ozone.urban.sesM, 
+          file = here('data', 'processed', 'ndi-ozone-urban-sesM.csv'),
+          row.names = F)
+
+### High Income
+dt.ndi.ozone.urban.ses <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.site.urban.ses.cat) %>%  
+  mutate(sesH = ifelse(ses.cat == "Mid", 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -ses.cat) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.urban.ses[ ,paste0("sesH_",cmp)] <- 
+      dt.ndi.ozone.urban.ses[ ,cmp] * dt.ndi.ozone.urban.ses$sesH
+}
+
+dt.ndi.ozone.urban.sesH <- dt.ndi.ozone.urban.ses %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, sesH, everything())
+
+write.csv(dt.ndi.ozone.urban.sesH, 
+          file = here('data', 'processed', 'ndi-ozone-urban-sesH.csv'),
+          row.names = F)
+```
+
+
+```{r ozone Region}
+cmp.sub <- c("SE", "CA", "CL", "NA", "NI", "NO3", "OC", 
+             "PB", "PM", "SI", "SO4", "V", "ZN")
+
+dt.ozone <- dt.ozone.1yr %>% 
+  select(Site.ID, Year, Month, cmp.sub)
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.site <- dt.ozone.site.ndi %>% 
+  select(Site.ID, Region.IV)
+
+### West = 1
+dt.ndi.ozone.west <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(rW = ifelse(Region.IV == 1, 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Region.IV) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.west[ ,paste0("rW_",cmp)] <- 
+      dt.ndi.ozone.west[ ,cmp] * dt.ndi.ozone.west$rW
+}
+
+dt.ndi.ozone.west <- dt.ndi.ozone.west %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rW, everything())
+
+write.csv(dt.ndi.ozone.west, 
+          file = here('data', 'processed', 'ndi-ozone-west.csv'),
+          row.names = F)
+
+### Midwest = 2
+dt.ndi.ozone.midwest <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(rMW = ifelse(Region.IV == 2, 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Region.IV) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.midwest[ ,paste0("rMW_",cmp)] <- 
+      dt.ndi.ozone.midwest[ ,cmp] * dt.ndi.ozone.midwest$rMW
+}
+
+dt.ndi.ozone.midwest <- dt.ndi.ozone.midwest %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rMW, everything())
+
+write.csv(dt.ndi.ozone.midwest, 
+          file = here('data', 'processed', 'ndi-ozone-midwest.csv'),
+          row.names = F)
+
+### South = 3
+dt.ndi.ozone.south <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(rS = ifelse(Region.IV == 3, 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Region.IV) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.south[ ,paste0("rS_",cmp)] <- 
+      dt.ndi.ozone.south[ ,cmp] * dt.ndi.ozone.south$rS
+}
+
+dt.ndi.ozone.south <- dt.ndi.ozone.south %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rS, everything())
+
+write.csv(dt.ndi.ozone.south, 
+          file = here('data', 'processed', 'ndi-ozone-south.csv'),
+          row.names = F)
+
+### Northeast = 4
+dt.ndi.ozone.northeast <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(rNE = ifelse(Region.IV == 4, 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Region.IV) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.northeast[ ,paste0("rNE_",cmp)] <- 
+      dt.ndi.ozone.northeast[ ,cmp] * dt.ndi.ozone.northeast$rNE
+}
+
+dt.ndi.ozone.northeast <- dt.ndi.ozone.northeast %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_")) %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rNE, everything())
+
+write.csv(dt.ndi.ozone.northeast, 
+          file = here('data', 'processed', 'ndi-ozone-northeast.csv'),
+          row.names = F)
+```
+
+```{r Factor Region}
+fac <- c("Factor1","Factor2","Factor3","Factor4",
+         "Factor5","Factor6","Factor7","Factor8")
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.site <- dt.ozone.site.ndi %>% 
+  select(Site.ID, Region.IV)
+
+### West = 1
+dt.ndi.fac.west <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.fac.ex.ec.1yr) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(rW = ifelse(Region.IV == 1, 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Region.IV) 
+  
+for (cmp in fac){
+    dt.ndi.fac.west[ ,paste0("rW_",cmp)] <- 
+      dt.ndi.fac.west[ ,cmp] * dt.ndi.fac.west$rW
+}
+
+dt.ndi.fac.west <- dt.ndi.fac.west %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rW, everything())
+
+write.csv(dt.ndi.fac.west, 
+          file = here('data', 'processed', 'ndi-fac-west.csv'),
+          row.names = F)
+
+### Midwest = 2
+dt.ndi.fac.midwest <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.fac.ex.ec.1yr) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(rMW = ifelse(Region.IV == 2, 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Region.IV) 
+  
+for (cmp in fac){
+    dt.ndi.fac.midwest[ ,paste0("rMW_",cmp)] <- 
+      dt.ndi.fac.midwest[ ,cmp] * dt.ndi.fac.midwest$rMW
+}
+
+dt.ndi.fac.midwest <- dt.ndi.fac.midwest %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rMW, everything())
+
+write.csv(dt.ndi.fac.midwest, 
+          file = here('data', 'processed', 'ndi-fac-midwest.csv'),
+          row.names = F)
+
+### South = 3
+dt.ndi.fac.south <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.fac.ex.ec.1yr) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(rS = ifelse(Region.IV == 3, 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Region.IV) 
+  
+for (cmp in fac){
+    dt.ndi.fac.south[ ,paste0("rS_",cmp)] <- 
+      dt.ndi.fac.south[ ,cmp] * dt.ndi.fac.south$rS
+}
+
+dt.ndi.fac.south <- dt.ndi.fac.south %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rS, everything())
+
+write.csv(dt.ndi.fac.south, 
+          file = here('data', 'processed', 'ndi-fac-south.csv'),
+          row.names = F)
+
+### Northeast = 4
+dt.ndi.fac.northeast <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.fac.ex.ec.1yr) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(rNE = ifelse(Region.IV == 4, 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Region.IV) 
+  
+for (cmp in fac){
+    dt.ndi.fac.northeast[ ,paste0("rNE_",cmp)] <- 
+      dt.ndi.fac.northeast[ ,cmp] * dt.ndi.fac.northeast$rNE
+}
+
+dt.ndi.fac.northeast <- dt.ndi.fac.northeast %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rNE, everything())
+
+write.csv(dt.ndi.fac.northeast, 
+          file = here('data', 'processed', 'ndi-fac-northeast.csv'),
+          row.names = F)
+```
+
+
+```{r ozone Residual Region}
+cmp.sub <- c("PM_SE","PM_CA","PM_CL","PM_NA","PM_NI","PM_NO3",
+            "PM_OC","PM_PB","PM_SI","PM_SO4","PM_V","PM_ZN")
+
+dt.ozone <- dt.ozone.residual.1yr %>% 
+  select(Site.ID, Year, Month, cmp.sub)
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.site <- dt.ozone.site.ndi %>% 
+  select(Site.ID, Region.IV)
+
+
+### West = 1
+dt.ndi.ozone.west <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(rW = ifelse(Region.IV == 1, 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Region.IV) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.west[ ,paste0("rW_",cmp)] <- 
+      dt.ndi.ozone.west[ ,cmp] * dt.ndi.ozone.west$rW
+}
+
+dt.ndi.ozone.res.west <- dt.ndi.ozone.west %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rW, everything())
+
+write.csv(dt.ndi.ozone.res.west, 
+          file = here('data', 'processed', 'ndi-ozone-res-west.csv'),
+          row.names = F)
+
+
+
+
+### Midwest = 2
+
+dt.ndi.ozone.midwest <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(rMW = ifelse(Region.IV == 2, 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Region.IV) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.midwest[ ,paste0("rMW_",cmp)] <- 
+      dt.ndi.ozone.midwest[ ,cmp] * dt.ndi.ozone.midwest$rMW
+}
+
+dt.ndi.ozone.res.midwest <- dt.ndi.ozone.midwest %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rMW, everything())
+
+write.csv(dt.ndi.ozone.res.midwest, 
+          file = here('data', 'processed', 'ndi-ozone-res-midwest.csv'),
+          row.names = F)
+
+### South = 3
+
+dt.ndi.ozone.south <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(rS = ifelse(Region.IV == 3, 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Region.IV) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.south[ ,paste0("rS_",cmp)] <- 
+      dt.ndi.ozone.south[ ,cmp] * dt.ndi.ozone.south$rS
+}
+
+dt.ndi.ozone.res.south <- dt.ndi.ozone.south %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rS, everything())
+
+write.csv(dt.ndi.ozone.res.south, 
+          file = here('data', 'processed', 'ndi-ozone-res-south.csv'),
+          row.names = F)
+
+### Northeast = 4
+
+dt.ndi.ozone.northeast <- dt.master.ndi.ozone %>% 
+  select(Site.ID:no_death_lungc,
+         -no_death_nacc, -no_death_acc,
+         -no_death_uri, -no_death_ards) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.site) %>% 
+  mutate(rNE = ifelse(Region.IV == 4, 0,1),
+         StrID = paste(age, sex, race)) %>% 
+  select(-age, -sex, -race, -Region.IV) 
+  
+for (cmp in cmp.sub){
+    dt.ndi.ozone.northeast[ ,paste0("rNE_",cmp)] <- 
+      dt.ndi.ozone.northeast[ ,cmp] * dt.ndi.ozone.northeast$rNE
+}
+
+dt.ndi.ozone.res.northeast <- dt.ndi.ozone.northeast %>% 
+  rename(SiteID = Site.ID) %>% 
+  select(SiteID, Year, Month, StrID, rNE, everything())
+
+write.csv(dt.ndi.ozone.res.northeast, 
+          file = here('data', 'processed', 'ndi-ozone-res-northeast.csv'),
+          row.names = F)
+
+```
+
+```{r ozone BRFSS}
+cmp.sub <- c("SE", "CA", "CL", "NA", "NI", "NO3", "OC", 
+             "PB", "PM", "SI", "SO4", "V", "ZN")
+
+dt.ozone <- dt.ozone.1yr %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_"))
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.ndi.ozone.brfss <- dt.master.ndi.ozone %>% 
+  mutate(StrID = paste(age, sex, race)) %>% 
+  select(Site.ID, Year, Month, StrID, no_enrollee:no_death_kidn) %>%  
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  inner_join(dt.brfss.site) %>% 
+  rename(SiteID = Site.ID)
+
+write.csv(dt.ndi.ozone.brfss, 
+          file = here('data', 'processed', 'ndi-ozone-brfss.csv'),
+          row.names = F)
+
+ozone.brfs.count <- dt.ndi.ozone.brfss %>% 
+  distinct(SiteID, Year, Month) %>% 
+  rename(Site_ID = SiteID)
+
+write.csv(ozone.brfs.count, 
+          file = here('data', 'processed', 'ozone-brfss-count.csv'),
+          row.names = F)
+
+dt.ozone.site.ndi.brfs <- dt.ndi.ozone.brfss %>% 
+  rename(Site.ID = SiteID) %>% 
+  distinct(Site.ID) %>% 
+  merge(dt.ozone.site.ndi)
+
+dt.ozone.site.ndi.brfs %>% 
+  group_by(Location.Setting) %>% 
+  summarise(n = n())
+#RURAL	37			
+#SUBURBAN	42			
+#URBAN	56	> 98
+```
+
+
+```{r ozone BZ 6}
+cmp.sub <- c("SE", "CA", "CL", "NA", "NI", "NO3", "OC", 
+             "PB", "PM", "SI", "SO4", "V", "ZN")
+
+dt.ozone <- dt.ozone.1yr %>% 
+  select(Site.ID, Year, Month, cmp.sub) %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_"))
+
+dt.ses <- dt.ses.site.bz6 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.ndi.ozone.bz6 <- dt.master.ndi.ozone.bz6 %>% 
+  mutate(StrID = paste(age, sex, race)) %>% 
+  select(Site.ID, Year, Month, StrID, no_enrollee:no_death_lungc) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  rename(SiteID = Site.ID)
+
+write.csv(dt.ndi.ozone.bz6, 
+          file = here('data', 'processed', 'ndi-ozone-bz6.csv'),
+          row.names = F)
+```
+
+```{r ozone BZ 12}
+cmp.sub <- c("SE", "CA", "CL", "NA", "NI", "NO3", "OC", 
+             "PB", "PM", "SI", "SO4", "V", "ZN")
+
+dt.ozone <- dt.ozone.1yr %>% 
+  select(Site.ID, Year, Month, cmp.sub) %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_"))
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.ndi.ozone.bz12 <- dt.master.ndi.ozone.bz12 %>% 
+  mutate(StrID = paste(age, sex, race)) %>% 
+  select(Site.ID, Year, Month, StrID, no_enrollee:no_death_lungc) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  rename(SiteID = Site.ID)
+
+write.csv(dt.ndi.ozone.bz12, 
+          file = here('data', 'processed', 'ndi-ozone-bz12.csv'),
+          row.names = F)
+```
+
+```{r ozone BZ 24}
+cmp.sub <- c("SE", "CA", "CL", "NA", "NI", "NO3", "OC", 
+             "PB", "PM", "SI", "SO4", "V", "ZN")
+
+dt.ozone <- dt.ozone.1yr %>% 
+  select(Site.ID, Year, Month, cmp.sub) %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_"))
+
+dt.ses <- dt.ses.site.bz24 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.ndi.ozone.bz24 <- dt.master.ndi.ozone.bz24 %>% 
+  mutate(StrID = paste(age, sex, race)) %>% 
+  select(Site.ID, Year, Month, StrID, no_enrollee:no_death_lungc) %>% 
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  rename(SiteID = Site.ID)
+
+write.csv(dt.ndi.ozone.bz24, 
+          file = here('data', 'processed', 'ndi-ozone-bz24.csv'),
+          row.names = F)
+```
+
+```{r ozone - 5yr}
+dt.ozone <- dt.ozone.5yr %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_"))
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.ndi.ozone.5 <- dt.master.ndi.ozone %>% 
+  mutate(StrID = paste(age, sex, race)) %>% 
+  select(Site.ID, Year, Month, StrID, no_enrollee:no_death_kidn) %>%  
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  rename(SiteID = Site.ID)
+
+write.csv(dt.ndi.ozone.5, 
+          file = here('data', 'processed', 'ndi-ozone-5yr.csv'),
+          row.names = F)
+```
+
+```{r ozone - 4yr - 5yr}
+dt.ozone <- dt.ozone.4yr.5yr %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_"))
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.ndi.ozone.4 <- dt.master.ndi.ozone %>% 
+  mutate(StrID = paste(age, sex, race)) %>% 
+  select(Site.ID, Year, Month, StrID, no_enrollee:no_death_kidn) %>%  
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  rename(SiteID = Site.ID)
+
+write.csv(dt.ndi.ozone.4, 
+          file = here('data', 'processed', 'ndi-ozone-4yr-5yr.csv'),
+          row.names = F)
+```
+
+```{r ozone - 3yr - 5yr}
+dt.ozone <- dt.ozone.3yr.5yr %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_"))
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.ndi.ozone.3 <- dt.master.ndi.ozone %>% 
+  mutate(StrID = paste(age, sex, race)) %>% 
+  select(Site.ID, Year, Month, StrID, no_enrollee:no_death_kidn) %>%  
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  rename(SiteID = Site.ID)
+
+write.csv(dt.ndi.ozone.3, 
+          file = here('data', 'processed', 'ndi-ozone-3yr-5yr.csv'),
+          row.names = F)
+```
+
+```{r ozone - 2yr - 5yr}
+dt.ozone <- dt.ozone.2yr.5yr %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_"))
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.ndi.ozone.2 <- dt.master.ndi.ozone %>% 
+  mutate(StrID = paste(age, sex, race)) %>% 
+  select(Site.ID, Year, Month, StrID, no_enrollee:no_death_kidn) %>%  
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  rename(SiteID = Site.ID)
+
+write.csv(dt.ndi.ozone.2, 
+          file = here('data', 'processed', 'ndi-ozone-2yr-5yr.csv'),
+          row.names = F)
+```
+
+```{r ozone - 1yr - 5yr}
+dt.ozone <- dt.ozone.1yr.5yr %>% 
+  rename_at(cmp.sub, ~paste("Yr", .x, sep = "_"))
+
+dt.ses <- dt.ses.site.bz12 %>% 
+  mutate(ses = SES.Zip.Norm) %>% 
+  select(Site.ID, Year, ses)
+
+dt.ndi.ozone.1 <- dt.master.ndi.ozone %>% 
+  mutate(StrID = paste(age, sex, race)) %>% 
+  select(Site.ID, Year, Month, StrID, no_enrollee:no_death_kidn) %>%  
+  inner_join(dt.ozone) %>% 
+  inner_join(dt.ses) %>% 
+  rename(SiteID = Site.ID)
+
+write.csv(dt.ndi.ozone.1, 
+          file = here('data', 'processed', 'ndi-ozone-1yr-5yr.csv'),
+          row.names = F)
+```

@@ -25,6 +25,9 @@ output:
       from Sites to the Zipcodes in their x-mile bufferzone
   (5) Merge it with CMS data (on NEU Cluster) to find the Sites which have
       population living in their x-mile bufferzone
+      
+### Note:
+  1. In data merged with CMS, bufferzone is 6-mile unless specified
 
 ```{r load packages}
 library(tidyverse)
@@ -40,9 +43,11 @@ source(here('code','data-processors','air-data-processor-function.R'))
 ```{r load data}
 dirUSSpatial <- 
   'C:\\Users\\fkazem01\\Box\\Projects\\USA Spatial\\data\\processed\\'
+dirPMC <- 
+  'C:\\Users\\fkazem01\\Box\\Projects\\PM Components\\data\\processed\\'
 load(paste0(dirUSSpatial,'state-region.RDa'))
 load(paste0(dirUSSpatial,'site-zip.RDa'))
-load(here('data','processed','aqs-sites.RDa'))
+load(paste0(dirPMC,'aqs-sites.RDa'))
 ```
 
 ```{r EPA AQS Data Download - hourly data}
@@ -133,7 +138,7 @@ dt.site.ozone.warm %>%
 #                  8			
 #RURAL	           564			
 #SUBURBAN	         493			
-#URBAN	           206	
+#URBAN AND CENTER CITY	           206	
 
 dt.ozone.warm %>% 
   distinct(Site.ID, Year) %>% 
@@ -186,34 +191,76 @@ dt.ozone.site.zip.bz6 %>% distinct(Site.ID) %>% nrow() #1271 > 1224
 # It has 1224 sites with 10,903 zipcodes around them
 ```
 
-```{r Not Yet - > Post mergeing with CMS Data}
-dt.site.ndi.bz12 <- read.csv(here('data', 'raw', 'site_ozone_ndi_bz12.csv')) %>% 
-  rename(Site.ID = Site_ID)
+```{r Post mergeing with CMS Data}
+dt.ozone.site.ndi <- read.csv(here('data', 'processed', 'site_ozone_ndi.csv')) %>% 
+  rename(Site.ID = Site_ID) %>% 
+  left_join(dt.aqs.sites)
+# 1221 out of 1224 sites have population living in their 6-mile bufferzone
 
-# 325 out of 328 sites have population living in their 12-mile bufferzone
-dt.site.ndi.bz12 %>% 
-  group_by(Site.ID) %>% 
-  summarise(n = n()) %>% filter(n > 0) %>% 
-  nrow() # 325 > 317 > 316 > 308: with 4+ years
+summary(dt.ozone.site.ndi$Location.Setting) 
+fix(dt.ozone.site.ndi) # changed blanks to 'RURAL'
 
-# TOT/TOR Method in different location.set
-dt.site.ndi.bz12 %>% 
-  distinct(Site.ID) %>% 
-  left_join(dt.site.carbon.method) %>% 
-  left_join(dt.aqs.sites) %>% 
-  group_by(Location.Setting, Method) %>% 
-  summarise(n = n())
+save(dt.ozone.site.ndi, file = here('data', 'processed', 'ozone-site-ndi.RDa'))
+write.csv(dt.ozone.site.ndi, 
+          file = here('data', 'processed', 'ozone-site-ndi.csv'),
+          row.names = F)
 
-# urban and suburban: TOT >> TOR
-# rural:              TOR >> TOT
-# improve sites only in rural
-
-dt.site.ndi.bz12 %>% 
-  distinct(Site.ID) %>% 
-  left_join(dt.aqs.sites) %>% 
+dt.ozone.site.ndi %>% 
   group_by(Location.Setting) %>% 
   summarise(n = n())
-# urban 72
-# suburban 69
-# rural 182
+# RURAL	522			
+# SUBURBAN	493			
+# URBAN AND CENTER CITY	206
 ```
+
+```{r Extending bufferzone to 12- and 24-}
+# sites that have population in their 6-mile buffer
+# remove o3 measures for now to make the dataset smaller
+dt.ozone <- dt.ozone.warm %>% 
+  select(Site.ID, Year) %>% 
+  mutate(psuedo = 100) %>% 
+  inner_join(dt.ozone.site.ndi)
+
+# joining zipcodes to monitoring sites
+dt.ozone <- dt.ozone %>% 
+  inner_join(dt.site.zip, by = c("Site.ID", "Year")) %>% 
+  arrange(Zip.Code, Year, Dist)
+
+# for each zipcode, pick the site with shorter distance to zipcode centroeid
+dt.site.dist.shorter <- dt.ozone %>% 
+  group_by(Zip.Code, Year) %>% 
+  filter(Dist == min (Dist)) %>% 
+  arrange(Zip.Code, Year) %>% 
+  as.data.frame()
+
+# 12-mile bufferzone around monitoring site
+dt.ozone.site.zip.bz12 <- dt.site.dist.shorter %>% 
+  filter(Dist <= 12) %>% 
+  select(Zip.Code, Year, Site.ID, psuedo)
+
+save(dt.ozone.site.zip.bz12, 
+     file = here('data', 'processed', 'ozone-site-zip-bz12.RDa'))
+write.csv(dt.ozone.site.zip.bz12, 
+          file = here('data', 'processed', 'ozone-site-zip-bz12.csv'),
+          row.names = F)
+
+# Count number of zipcodes and sites
+dt.ozone.site.zip.bz12 %>% distinct(Zip.Code) %>% nrow() #18,780 > 18681
+dt.ozone.site.zip.bz12 %>% distinct(Site.ID) %>% nrow() #1258 > 1221
+
+# 24-mile bufferzone around monitoring site
+dt.ozone.site.zip.bz24 <- dt.site.dist.shorter %>% 
+  filter(Dist <= 24) %>% 
+  select(Zip.Code, Year, Site.ID, psuedo)
+
+save(dt.ozone.site.zip.bz24, 
+     file = here('data', 'processed', 'ozone-site-zip-bz24.RDa'))
+write.csv(dt.ozone.site.zip.bz24, 
+          file = here('data', 'processed', 'ozone-site-zip-bz24.csv'),
+          row.names = F)
+
+# Count number of zipcodes and sites
+dt.ozone.site.zip.bz24 %>% distinct(Zip.Code) %>% nrow() #28,029 > 27794
+dt.ozone.site.zip.bz24 %>% distinct(Site.ID) %>% nrow() #1268 > 1221
+```
+
