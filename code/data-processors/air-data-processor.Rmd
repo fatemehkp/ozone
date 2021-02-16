@@ -264,3 +264,97 @@ dt.ozone.site.zip.bz24 %>% distinct(Zip.Code) %>% nrow() #28,029 > 27794
 dt.ozone.site.zip.bz24 %>% distinct(Site.ID) %>% nrow() #1268 > 1221
 ```
 
+
+```{r - Adding yearly pm and no2 data to warm season ozone data}
+# all zipcodes in 6-mile bufferzone of each site each year
+dt.ozone.site.all.zip.bz6  <- dt.ozone.warm %>% 
+  inner_join(dt.ozone.site.ndi) %>% 
+  inner_join(dt.site.zip) %>% 
+  arrange(Site.ID, Year, Dist) %>% 
+  filter(Dist <= 6) %>% 
+  select(-Zip.Type, -Dist)
+
+write.csv(dt.ozone.site.all.zip.bz6, 
+          file = here('data', 'processed', 'ozone-site-all-zip-bz6.csv'), 
+          row.names = F)
+
+# all zipcodes in 12-mile bufferzone of each site each year
+dt.ozone.site.all.zip.bz12  <- dt.ozone.warm %>% 
+  inner_join(dt.ozone.site.ndi) %>% 
+  inner_join(dt.site.zip) %>% 
+  arrange(Site.ID, Year, Dist) %>% 
+  filter(Dist <= 12) %>% 
+  select(-Zip.Type, -Dist)
+
+write.csv(dt.ozone.site.all.zip.bz12, 
+          file = here('data', 'processed', 'ozone-site-all-zip-bz12.csv'), 
+          row.names = F)
+
+# all zipcodes in 24-mile bufferzone of each site each year
+dt.ozone.site.all.zip.bz24  <- dt.ozone.warm %>% 
+  inner_join(dt.ozone.site.ndi) %>% 
+  inner_join(dt.site.zip) %>% 
+  arrange(Site.ID, Year, Dist) %>% 
+  filter(Dist <= 24) %>% 
+  select(-Zip.Type, -Dist)
+
+write.csv(dt.ozone.site.all.zip.bz24, 
+          file = here('data', 'processed', 'ozone-site-all-zip-bz24.csv'), 
+          row.names = F)
+
+# ozone-site-all-zip-bz.csv were uploaded on NEU Cluster to be merged with ...
+# ... -1yr-mvavg zipcode level PM data.
+
+
+# 1yr-mvavg PM value for each site based on zipcodes in x-mile value
+dt.pm.ozone.bz6 <- read.csv(
+  here('data', 'processed','pm_ozone_bz6.csv')) %>% 
+  rename(Site.ID = Site_ID,
+         Month = month,
+         PM = PM_1yr)
+save(dt.pm.ozone.bz6, 
+     file = here('data', 'processed', 'pm-ozone-bz6.RDa'))
+
+dt.pm.ozone.bz12 <- read.csv(
+  here('data', 'processed','pm_ozone_bz12.csv')) %>% 
+  rename(Site.ID = Site_ID,
+         Month = month,
+         PM = PM_1yr)
+save(dt.pm.ozone.bz12, 
+     file = here('data', 'processed', 'pm-ozone-bz12.RDa'))
+
+dt.pm.ozone.bz24 <- read.csv(
+  here('data', 'processed','pm_ozone_bz24.csv')) %>% 
+  rename(Site.ID = Site_ID,
+         Month = month,
+         PM = PM_1yr)
+save(dt.pm.ozone.bz24, 
+     file = here('data', 'processed', 'pm-ozone-bz24.RDa'))
+
+
+# 1yr-mvavg NO2 value for each site based on zipcodes in x-mile value
+dt.no2.ozone.bz6 <- read.csv(
+  here('data', 'processed','no2_ozone_bz6.csv')) %>% 
+  rename(Site.ID = Site_ID,
+         Month = month,
+         NO2 = NO2_1yr)
+save(dt.no2.ozone.bz6, 
+     file = here('data', 'processed', 'no2-ozone-bz6.RDa'))
+
+dt.no2.ozone.bz12 <- read.csv(
+  here('data', 'processed','no2_ozone_bz12.csv')) %>% 
+  rename(Site.ID = Site_ID,
+         Month = month,
+         NO2 = NO2_1yr)
+save(dt.no2.ozone.bz12, 
+     file = here('data', 'processed', 'no2-ozone-bz12.RDa'))
+
+dt.no2.ozone.bz24 <- read.csv(
+  here('data', 'processed','no2_ozone_bz24.csv')) %>% 
+  rename(Site.ID = Site_ID,
+         Month = month,
+         NO2 = NO2_1yr)
+save(dt.no2.ozone.bz24, 
+     file = here('data', 'processed', 'no2-ozone-bz24.RDa'))
+```
+
