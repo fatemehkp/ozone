@@ -191,6 +191,10 @@ dt.ndi.ozone.age <- dt.age %>%
   inner_join(dt.pm.ozone.bz6) %>% 
   inner_join(dt.ses)
 
+dt.ndi.ozone.age <-
+  rename_with(dt.ndi.ozone.age, ~ gsub(".", "", .x, fixed = TRUE)) %>% 
+  mutate(State = substr(SiteID,1,2))
+
 save(dt.ndi.ozone.age, 
      file = here('data', 'analysis', 'ndi-ozone-age.RDa'))
 ```
@@ -204,6 +208,10 @@ dt.ndi.ozone.race <- dt.master.ndi.ozone.race %>%
   inner_join(dt.pm.ozone.bz6) %>% 
   inner_join(dt.ses)
 
+dt.ndi.ozone.race <-
+  rename_with(dt.ndi.ozone.race, ~ gsub(".", "", .x, fixed = TRUE)) %>% 
+  mutate(State = substr(SiteID,1,2))
+
 save(dt.ndi.ozone.race, 
      file = here('data', 'analysis', 'ndi-ozone-race.RDa')) 
 
@@ -213,7 +221,7 @@ save(dt.ndi.ozone.race,
 
 ```{r r ozone urban SES Categories}
 dt.site.urban <- dt.site %>% 
-  filter(!Location.Setting == "RURAL") %>% 
+  filter(Location.Setting == "URBAN AND CENTER CITY") %>% 
   select(Site.ID)
 
 dt.site.urban.ses.cat <- dt.site.urban %>% 
@@ -239,4 +247,34 @@ dt.ndi.ozone.urban.sescat <-
 
 save(dt.ndi.ozone.urban.sescat, 
      file = here('data', 'analysis', 'ndi-ozone-urban-sescat.RDa'))
+```
+
+```{r r ozone urban and suburban SES Categories}
+dt.site.urbsub <- dt.site %>% 
+  filter(!Location.Setting == "RURAL") %>% 
+  select(Site.ID)
+
+dt.site.urbsub.ses.cat <- dt.site.urbsub %>% 
+  inner_join(dt.ses)
+
+qtl <- dt.site.urbsub.ses.cat %>% 
+  summarise(qtl = quantile(ses, c(0.33, 0.66)))
+
+dt.site.urbsub.ses.cat <- dt.site.urbsub.ses.cat %>% 
+  mutate(ses.cat = ifelse(ses < qtl[1,], "Low",
+                          ifelse(ses >qtl[1,] & ses < qtl[2,], "Mid", "High")))
+
+dt.ndi.ozone.urbsub.sescat <- dt.master.ndi.ozone %>% 
+  mutate(StrID = paste(age, sex, race)) %>% 
+  select(Site.ID, Year, Month, StrID, no_enrollee:no_death_kidn) %>%  
+  inner_join(dt.ozone.warm) %>% 
+  inner_join(dt.pm.ozone.bz6) %>% 
+  inner_join(dt.site.urbsub.ses.cat)
+
+dt.ndi.ozone.urbsub.sescat <-
+  rename_with(dt.ndi.ozone.urbsub.sescat, ~ gsub(".", "", .x, fixed = TRUE)) %>% 
+  mutate(State = substr(SiteID,1,2))
+
+save(dt.ndi.ozone.urbsub.sescat, 
+     file = here('data', 'analysis', 'ndi-ozone-urbsub-sescat.RDa'))
 ```

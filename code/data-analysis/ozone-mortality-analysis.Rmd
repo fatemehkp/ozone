@@ -1,0 +1,972 @@
+---
+title: "The Impact of Long-Term O3 Exposure on Specific Causes of Death"
+substitle: "Effect Modification in a US Medicare Cohort"
+author: "Fatemeh Kazemi"
+date: "2/20/2021"
+output: html_document
+---
+
+### Variables           - description
+    1. SiteID           - unique identifier of each monitor (site)
+    2. year             - year
+    3. month            - month
+    4. age              - age
+                          a. in all analysis 
+                             65, 66, ..., 90
+                          b. in Age effect modification analysis
+                             LE75 : less than/equal to 75
+                             M75 : More than 75
+    5. sex              - sex (F/M)
+    6. race             - race 
+                          a. in all analysis
+                              W  : White
+                              NW : Nonwhite
+                          b. in Race effect modification analysis
+                              A  : Asian
+                              B  : Black
+                              H  : Hispanic
+                              N  : Native American
+                              W  : White
+    7. StrID            - age-sex-race(asr) strata
+    8. no_enrollee      - number of Medicare enrollees of each asr group in each
+                          location at the beginning of the month 
+    9. no_death_cause   - number of death at each asr group for each cause in 
+                          month t for each location
+   10. O3maxh           - warm season avg of max daily o3 for each calender year
+                          at the given site
+   11. O3avgh           - warm season avg of daily avg o3 for each calender year
+                          at the given site
+   12. O3max8h          - warm season avg of 8h-max daily o3 for each calender year
+                          at the given site
+   13. PM               - PM2.5 yearly average over the previous year at the 
+                          given site up to the given month
+   14. ses              - xxx
+   15. LocationSetting  - location setting
+                          a. URBAN AND CENTER CITY
+                          b. SUBURBAN
+                          c. RURAL
+   16. RegionIV     	  - region as defined in the paper:  1, 2, 3, 4 
+                          1 : West
+                          2 : Midwest
+                          3 : South
+                          4 : Northeast
+   17. State      	    - state of residence
+   18. NO2              - NO2 yearly average over the previous year at the 
+                          given site up to the given month
+   19. sescat           - SES category for urban or urban/suburban areas
+
+### Models
+    1. 
+    
+###
+srun -p short --pty --export=ALL -N 1 --mem=200Gb --time=24:00:00 /bin/bash
+/shared/centos7/r-project/3.6.1/bin/R
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T)
+```
+
+```{r load packages}
+  library(tidyverse)
+  library(here)
+  library(survival)
+
+```
+
+```{r load data}
+load(here('data','analysis','ndi-ozone.RDa'))
+load(here('data','analysis','ndi-ozone-no2.RDa'))
+load(here('data','analysis','ndi-ozone-age.RDa'))
+load(here('data','analysis','ndi-ozone-race.RDa'))
+```
+
+```{r }
+cuz <- c("allcuz","nacc","acc",
+         "cvd","ihd","chf","cbv",
+         "resp","copd","pneu","uri","ards",
+         "canc","lungc",
+         "seps",
+         "VaD","AD","NeD","UsD",
+         "diabt1", "diabt2", "diab",
+         "kidn")
+```
+
+```{r base}
+out.base = matrix(nrow = 1, ncol = 3, byrow = T) 
+colnames(out.base) <- c("Outcome", "O3_B", "O3_SE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 3, byrow = T) 
+  colnames(out) <- c("Outcome", "O3_B", "O3_SE")
+  out[1,1] <- Y
+  out[1,2] <- coef(glm_model)['O3maxh']
+  out[1,3] <- summary(glm_model)$coefficients['O3maxh', 2]
+  out.base <- rbind(out.base, out) 
+}
+save(out.base, 
+     file = here('output', 'analysis', 'out-base.RDa'))
+
+```
+
+```{r state}
+out.state = matrix(nrow = 1, ncol = 3, byrow = T) 
+colnames(out.state) <- c("Outcome", "O3_B", "O3_SE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh + State + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 3, byrow = T) 
+  colnames(out) <- c("Outcome", "O3_B", "O3_SE")
+  out[1,1] <- Y
+  out[1,2] <- coef(glm_model)['O3maxh']
+  out[1,3] <- summary(glm_model)$coefficients['O3maxh', 2]
+  out.state <- rbind(out.state, out) 
+}
+save(out.state, 
+     file = here('output', 'analysis', 'out-state.RDa'))
+
+```
+
+```{r ses}
+out.ses = matrix(nrow = 1, ncol = 3, byrow = T) 
+colnames(out.ses) <- c("Outcome", "O3_B", "O3_SE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 3, byrow = T) 
+  colnames(out) <- c("Outcome", "O3_B", "O3_SE")
+  out[1,1] <- Y
+  out[1,2] <- coef(glm_model)['O3maxh']
+  out[1,3] <- summary(glm_model)$coefficients['O3maxh', 2]
+  out.ses <- rbind(out.ses, out) 
+}
+save(out.ses, 
+     file = here('output', 'analysis', 'out-ses.RDa'))
+
+```
+
+```{r pm}
+out.pm = matrix(nrow = 1, ncol = 5, byrow = T) 
+colnames(out.pm) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 5, byrow = T) 
+  colnames(out) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
+  out[1,1] <- Y
+  # Ozone
+  out[1,2] <- coef(glm_model)['O3maxh']
+  out[1,3] <- summary(glm_model)$coefficients['O3maxh',2]
+  # PM2.5
+  out[1,4] <- coef(glm_model)['PM']
+  out[1,5] <- summary(glm_model)$coefficients['PM',2] 
+  out.pm <- rbind(out.pm, out) 
+}
+
+save(out.pm, 
+     file = here('output', 'analysis', 'out-pm.RDa'))
+
+```
+
+```{r no2}
+out.no2 = matrix(nrow = 1, ncol = 5, byrow = T) 
+colnames(out.no2) <- c("Outcome","O3_B","O3_SE","NO2_B","NO2_SE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.no2[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh + NO2 + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.no2, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 5, byrow = T) 
+  colnames(out) <- c("Outcome","O3_B","O3_SE","NO2_B","NO2_SE")
+  out[1,1] <- Y
+  # Ozone
+  out[1,2] <- coef(glm_model)['O3maxh']
+  out[1,3] <- summary(glm_model)$coefficients['O3maxh',2]
+  # NO2
+  out[1,4] <- coef(glm_model)['NO2']
+  out[1,5] <- summary(glm_model)$coefficients['NO2',2] 
+  out.no2 <- rbind(out.no2, out) 
+}
+save(out.no2, 
+     file = here('output', 'analysis', 'out-no2.RDa'))
+
+```
+
+```{r age}
+dt.ndi.ozone.age$age<-as.factor(dt.ndi.ozone.age$age)
+
+### Age LE75
+dt.ndi.ozone.age$age <- relevel(dt.ndi.ozone.age$age, ref = "LE75") 
+age.le = matrix(nrow = 1, ncol = 5, byrow = T) 
+colnames(age.le) <- c("Age_Cat","Outcome","O3_B","O3_SE","pValue")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.age[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*age + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.age, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 5, byrow = T) 
+  colnames(out) <- c("Age_Cat","Outcome","O3_B","O3_SE","pValue")
+  out[1,1] <- "LE75" 
+  out[1,2] <- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:ageM75',4]
+  age.le <- rbind(age.le, out)
+}
+
+### Age M75
+dt.ndi.ozone.age$age <- relevel(dt.ndi.ozone.age$age, ref = "M75") 
+age.mt = matrix(nrow = 1, ncol = 5, byrow = T) 
+colnames(age.mt) <- c("Age_Cat","Outcome","O3_B","O3_SE","pValue")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.age[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*age + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.age, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 5, byrow = T) 
+  colnames(out) <- c("Age_Cat","Outcome","O3_B","O3_SE","pValue")
+  out[1,1] <- "M75" 
+  out[1,2] <- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:ageLE75',4]
+  age.mt <- rbind(age.mt, out)
+}
+
+out.age <-na.omit(rbind(age.le, age.mt))
+save(out.age, 
+     file = here('output', 'analysis', 'out-age.RDa'))
+
+```
+
+```{r sex}
+dt.ndi.ozone$sex<-as.factor(dt.ndi.ozone$sex)
+
+### sex Female
+dt.ndi.ozone$sex <- relevel(dt.ndi.ozone$sex, ref = "F") 
+sex.F = matrix(nrow = 1, ncol = 5, byrow = T) 
+colnames(sex.F) <- c("sex_Cat","Outcome","O3_B","O3_SE","pValue")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*sex + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 5, byrow = T) 
+  colnames(out) <- c("sex_Cat","Outcome","O3_B","O3_SE","pValue")
+  out[1,1] <- "F" 
+  out[1,2] <- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:sexM',4]
+  sex.F <- rbind(sex.F, out)
+}
+
+save(sex.F, 
+     file = here('output', 'analysis', 'out-sexF.RDa'))
+
+### sex Male
+dt.ndi.ozone$sex <- relevel(dt.ndi.ozone$sex, ref = "M") 
+sex.M = matrix(nrow = 1, ncol = 5, byrow = T) 
+colnames(sex.M) <- c("sex_Cat","Outcome","O3_B","O3_SE","pValue")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*sex + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 5, byrow = T) 
+  colnames(out) <- c("sex_Cat","Outcome","O3_B","O3_SE","pValue")
+  out[1,1] <- "M" 
+  out[1,2] <- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:sexF',4]
+  sex.M <- rbind(sex.M, out)
+}
+
+save(sex.M, 
+     file = here('output', 'analysis', 'out-sexM.RDa'))
+
+out.sex <-na.omit(rbind(sex.F, sex.M))
+save(out.sex, 
+     file = here('output', 'analysis', 'out-sex.RDa'))
+
+```
+
+```{r race}
+dt.ndi.ozone.race$race <- as.factor(dt.ndi.ozone.race$race)
+
+### race Asian
+dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "A") 
+race.A = matrix(nrow = 1, ncol = 8, byrow = T) 
+colnames(race.A) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*race + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.race, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 8, byrow = T) 
+  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+  out[1,1]<- "A" 
+  out[1,2]<- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,6] <- summary(glm_model)$coefficients['O3maxh:raceB',4]
+  out[1,7] <- summary(glm_model)$coefficients['O3maxh:raceH',4]
+  out[1,8] <- summary(glm_model)$coefficients['O3maxh:raceW',4]
+  race.A <- rbind(race.A, out)
+}
+
+save(race.A, 
+     file = here('output', 'analysis', 'out-raceA.RDa'))
+
+### race Black
+dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "B") 
+race.B = matrix(nrow = 1, ncol = 8, byrow = T) 
+colnames(race.B) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*race + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.race, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 8, byrow = T) 
+  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+  out[1,1] <- "B" 
+  out[1,2] <- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:raceA',4]
+  out[1,7] <- summary(glm_model)$coefficients['O3maxh:raceH',4]
+  out[1,8] <- summary(glm_model)$coefficients['O3maxh:raceW',4]
+  race.B <- rbind(race.B, out)
+}
+
+save(race.B, 
+     file = here('output', 'analysis', 'out-raceB.RDa'))
+
+### race Hispanic
+dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "H") 
+race.H = matrix(nrow = 1, ncol = 8, byrow = T) 
+colnames(race.H) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*race + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.race, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 8, byrow = T) 
+  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+  out[1,1] <- "H" 
+  out[1,2] <- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:raceA',4]
+  out[1,6] <- summary(glm_model)$coefficients['O3maxh:raceB',4]
+  out[1,8] <- summary(glm_model)$coefficients['O3maxh:raceW',4]
+  race.H <- rbind(race.H, out)
+}
+
+save(race.H, 
+     file = here('output', 'analysis', 'out-raceH.RDa'))
+
+### race White
+dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "W") 
+race.W = matrix(nrow = 1, ncol = 8, byrow = T) 
+colnames(race.W) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*race + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.race, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 8, byrow = T) 
+  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+  out[1,1] <- "W" 
+  out[1,2] <- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:raceA',4]
+  out[1,6] <- summary(glm_model)$coefficients['O3maxh:raceB',4]
+  out[1,7] <- summary(glm_model)$coefficients['O3maxh:raceH',4]
+  race.W <- rbind(race.W, out)
+}
+
+save(race.W, 
+     file = here('output', 'analysis', 'out-raceW.RDa'))
+
+out.race <-na.omit(rbind(race.A, race.B, race.H, race.W))
+save(out.race, 
+     file = here('output', 'analysis', 'out-race.RDa'))
+
+```
+
+
+```{r Urbanicity}
+dt.ndi.ozone <- dt.ndi.ozone %>% 
+  mutate(LocSet = ifelse(LocationSetting == "URBAN AND CENTER CITY", "urban",
+                         ifelse(LocationSetting == "SUBURBAN", "suburban", "rural")),
+         LocSet = as.factor(LocSet))
+
+### Urban and City Center
+dt.ndi.ozone$LocSet <- relevel(dt.ndi.ozone$LocSet, ref = "urban") 
+loc.urban = matrix(nrow = 1, ncol = 7, byrow = T) 
+colnames(loc.urban) <- c("Loc_Set","Outcome","O3_B","O3_SE","pU","pS","pR")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*LocSet + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 7, byrow = T) 
+  colnames(out) <- c("Loc_Set","Outcome","O3_B","O3_SE","pU","pS","pR")
+  out[1,1]<- "urban" 
+  out[1,2]<- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,6] <- summary(glm_model)$coefficients['O3maxh:LocSetsuburban',4]
+  out[1,7] <- summary(glm_model)$coefficients['O3maxh:LocSetrural',4]
+  loc.urban <- rbind(loc.urban, out)
+}
+
+save(loc.urban, 
+     file = here('output', 'analysis', 'out-urban.RDa'))
+
+
+### Suburban
+dt.ndi.ozone$LocSet <- relevel(dt.ndi.ozone$LocSet, ref = "suburban") 
+loc.suburban = matrix(nrow = 1, ncol = 7, byrow = T) 
+colnames(loc.suburban) <- c("Loc_Set","Outcome","O3_B","O3_SE","pU","pS","pR")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*LocSet + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 7, byrow = T) 
+  colnames(out) <- c("Loc_Set","Outcome","O3_B","O3_SE","pU","pS","pR")
+  out[1,1]<- "suburban" 
+  out[1,2]<- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:LocSeturban',4]
+  out[1,7] <- summary(glm_model)$coefficients['O3maxh:LocSetrural',4]
+  loc.suburban <- rbind(loc.suburban, out)
+}
+
+save(loc.suburban, 
+     file = here('output', 'analysis', 'out-suburban.RDa'))
+
+### Rural
+dt.ndi.ozone$LocSet <- relevel(dt.ndi.ozone$LocSet, ref = "rural") 
+loc.rural = matrix(nrow = 1, ncol = 7, byrow = T) 
+colnames(loc.rural) <- c("Loc_Set","Outcome","O3_B","O3_SE","pU","pS","pR")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*LocSet + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 7, byrow = T) 
+  colnames(out) <- c("Loc_Set","Outcome","O3_B","O3_SE","pU","pS","pR")
+  out[1,1]<- "rural" 
+  out[1,2]<- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:LocSeturban',4]
+  out[1,6] <- summary(glm_model)$coefficients['O3maxh:LocSetsuburban',4]
+  loc.rural <- rbind(loc.rural, out)
+}
+
+save(loc.rural, 
+     file = here('output', 'analysis', 'out-rural.RDa'))
+
+```
+
+```{r Urban SES cat}
+dt.ndi.ozone.urban.sescat$sescat<-as.factor(dt.ndi.ozone.urban.sescat$sescat)
+
+### Low SES
+dt.ndi.ozone.urban.sescat$sescat <- relevel(dt.ndi.ozone.urban.sescat$sescat, 
+                                            ref = "Low") 
+ses.Low = matrix(nrow = 1, ncol = 7, byrow = T) 
+colnames(ses.Low) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.urban.sescat[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*sescat + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.urban.sescat, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 7, byrow = T) 
+  colnames(out) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
+  out[1,1]<- "Low" 
+  out[1,2]<- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,6] <- summary(glm_model)$coefficients['O3maxh:sescatMid',4]
+  out[1,7] <- summary(glm_model)$coefficients['O3maxh:sescatHigh',4]
+  ses.Low <- rbind(ses.Low, out)
+}
+
+save(ses.Low, 
+     file = here('output', 'analysis', 'out-sesL.RDa'))
+
+
+### Middle SES
+dt.ndi.ozone.urban.sescat$sescat <- relevel(dt.ndi.ozone.urban.sescat$sescat, 
+                                            ref = "Mid") 
+ses.Mid = matrix(nrow = 1, ncol = 7, byrow = T) 
+colnames(ses.Mid) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.urban.sescat[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*sescat + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.urban.sescat, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 7, byrow = T) 
+  colnames(out) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
+  out[1,1]<- "Mid" 
+  out[1,2]<- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:sescatLow',4]
+  out[1,7] <- summary(glm_model)$coefficients['O3maxh:sescatHigh',4]
+  ses.Mid <- rbind(ses.Mid, out)
+}
+
+save(ses.Mid, 
+     file = here('output', 'analysis', 'out-sesM.RDa'))
+
+### High SES
+dt.ndi.ozone.urban.sescat$sescat <- relevel(dt.ndi.ozone.urban.sescat$sescat,
+                                            ref = "High") 
+ses.High = matrix(nrow = 1, ncol = 7, byrow = T) 
+colnames(ses.High) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.urban.sescat[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*sescat + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.urban.sescat, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 7, byrow = T) 
+  colnames(out) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
+  out[1,1]<- "High" 
+  out[1,2]<- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:sescatLow',4]
+  out[1,6] <- summary(glm_model)$coefficients['O3maxh:sescatMid',4]
+  ses.High <- rbind(ses.High, out)
+}
+
+save(ses.High, 
+     file = here('output', 'analysis', 'out-sesH.RDa'))
+
+```
+
+```{r Urban and Suburban SES cat}
+dt.ndi.ozone.urbsub.sescat$sescat<-as.factor(dt.ndi.ozone.urbsub.sescat$sescat)
+
+### Low SES
+dt.ndi.ozone.urbsub.sescat$sescat <- relevel(dt.ndi.ozone.urbsub.sescat$sescat, 
+                                            ref = "Low") 
+ses.Low = matrix(nrow = 1, ncol = 7, byrow = T) 
+colnames(ses.Low) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.urbsub.sescat[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*sescat + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.urbsub.sescat, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 7, byrow = T) 
+  colnames(out) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
+  out[1,1]<- "Low" 
+  out[1,2]<- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,6] <- summary(glm_model)$coefficients['O3maxh:sescatMid',4]
+  out[1,7] <- summary(glm_model)$coefficients['O3maxh:sescatHigh',4]
+  ses.Low <- rbind(ses.Low, out)
+}
+
+save(ses.Low, 
+     file = here('output', 'analysis', 'out-sesL-2.RDa'))
+
+
+### Middle SES
+dt.ndi.ozone.urbsub.sescat$sescat <- relevel(dt.ndi.ozone.urbsub.sescat$sescat, 
+                                            ref = "Mid") 
+ses.Mid = matrix(nrow = 1, ncol = 7, byrow = T) 
+colnames(ses.Mid) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.urbsub.sescat[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*sescat + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.urbsub.sescat, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 7, byrow = T) 
+  colnames(out) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
+  out[1,1]<- "Mid" 
+  out[1,2]<- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:sescatLow',4]
+  out[1,7] <- summary(glm_model)$coefficients['O3maxh:sescatHigh',4]
+  ses.Mid <- rbind(ses.Mid, out)
+}
+
+save(ses.Mid, 
+     file = here('output', 'analysis', 'out-sesM-2.RDa'))
+
+### High SES
+dt.ndi.ozone.urbsub.sescat$sescat <- relevel(dt.ndi.ozone.urbsub.sescat$sescat,
+                                            ref = "High") 
+ses.High = matrix(nrow = 1, ncol = 7, byrow = T) 
+colnames(ses.High) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.urbsub.sescat[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*sescat + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.urbsub.sescat, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 7, byrow = T) 
+  colnames(out) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
+  out[1,1]<- "High" 
+  out[1,2]<- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:sescatLow',4]
+  out[1,6] <- summary(glm_model)$coefficients['O3maxh:sescatMid',4]
+  ses.High <- rbind(ses.High, out)
+}
+
+save(ses.High, 
+     file = here('output', 'analysis', 'out-sesH-2.RDa'))
+
+```
+
+```{r Region}
+dt.ndi.ozone <- dt.ndi.ozone %>% 
+  mutate(region = ifelse(RegionIV == 1, "W",
+                         ifelse(RegionIV == 2, "MW",
+                                ifelse(RegionIV == 3, "S", "NE"))),
+         region = as.factor(region))
+
+### West
+dt.ndi.ozone$region <- relevel(dt.ndi.ozone$region, ref = "W") 
+region.W = matrix(nrow = 1, ncol = 8, byrow = T) 
+colnames(region.W) <- c("region_Cat","Outcome","O3_B","O3_SE","pW","pMW","pS","pNE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*region + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 8, byrow = T) 
+  colnames(out) <- c("region_Cat","Outcome","O3_B","O3_SE","pW","pMW","pS","pNE")
+  out[1,1]<- "W" 
+  out[1,2]<- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,6] <- summary(glm_model)$coefficients['O3maxh:regionMW',4]
+  out[1,7] <- summary(glm_model)$coefficients['O3maxh:regionS',4]
+  out[1,8] <- summary(glm_model)$coefficients['O3maxh:regionNE',4]
+  region.W <- rbind(region.W, out)
+}
+
+save(region.W, 
+     file = here('output', 'analysis', 'out-west.RDa'))
+
+### Midwest
+dt.ndi.ozone$region <- relevel(dt.ndi.ozone$region, ref = "MW") 
+region.MW = matrix(nrow = 1, ncol = 8, byrow = T) 
+colnames(region.MW) <- c("region_Cat","Outcome","O3_B","O3_SE","pW","pMW","pS","pNE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*region + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 8, byrow = T) 
+  colnames(out) <- c("region_Cat","Outcome","O3_B","O3_SE","pW","pMW","pS","pNE")
+  out[1,1] <- "MW" 
+  out[1,2] <- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:regionW',4]
+  out[1,7] <- summary(glm_model)$coefficients['O3maxh:regionS',4]
+  out[1,8] <- summary(glm_model)$coefficients['O3maxh:regionNE',4]
+  region.MW <- rbind(region.MW, out)
+}
+
+save(region.MW, 
+     file = here('output', 'analysis', 'out-midwest.RDa'))
+
+### South
+dt.ndi.ozone$region <- relevel(dt.ndi.ozone$region, ref = "S") 
+region.S = matrix(nrow = 1, ncol = 8, byrow = T) 
+colnames(region.S) <- c("region_Cat","Outcome","O3_B","O3_SE","pW","pMW","pS","pNE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*region + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 8, byrow = T) 
+  colnames(out) <- c("region_Cat","Outcome","O3_B","O3_SE","pW","pMW","pS","pNE")
+  out[1,1] <- "S" 
+  out[1,2] <- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:regionW',4]
+  out[1,6] <- summary(glm_model)$coefficients['O3maxh:regionMW',4]
+  out[1,8] <- summary(glm_model)$coefficients['O3maxh:regionNE',4]
+  region.S <- rbind(region.S, out)
+}
+
+save(region.S, 
+     file = here('output', 'analysis', 'out-south.RDa'))
+
+### Northeast
+dt.ndi.ozone$region <- relevel(dt.ndi.ozone$region, ref = "NE") 
+region.NE = matrix(nrow = 1, ncol = 8, byrow = T) 
+colnames(region.NE) <- c("region_Cat","Outcome","O3_B","O3_SE","pW","pMW","pS","pNE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*region + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 8, byrow = T) 
+  colnames(out) <- c("region_Cat","Outcome","O3_B","O3_SE","pW","pMW","pS","pNE")
+  out[1,1] <- "NE" 
+  out[1,2] <- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:regionW',4]
+  out[1,6] <- summary(glm_model)$coefficients['O3maxh:regionMW',4]
+  out[1,7] <- summary(glm_model)$coefficients['O3maxh:regionS',4]
+  region.NE <- rbind(region.NE, out)
+}
+
+save(region.NE, 
+     file = here('output', 'analysis', 'out-northeast.RDa'))
+
+#out.race <-na.omit(rbind(race.A, race.B, race.H, race.N, race.W))
+#save(out.race, 
+#     file = here('output', 'analysis', 'out-race.RDa'))
+
+```
+
+```{r bz12}
+out.pm.bz12 = matrix(nrow = 1, ncol = 5, byrow = T) 
+colnames(out.pm.bz12) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.bz12[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.bz12, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 5, byrow = T) 
+  colnames(out) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
+  out[1,1] <- Y
+  # Ozone
+  out[1,2] <- coef(glm_model)['O3maxh']
+  out[1,3] <- summary(glm_model)$coefficients['O3maxh',2]
+  # PM2.5
+  out[1,4] <- coef(glm_model)['PM']
+  out[1,5] <- summary(glm_model)$coefficients['PM',2] 
+  out.pm.bz12 <- rbind(out.pm.bz12, out) 
+}
+
+save(out.pm.bz12, 
+     file = here('output', 'analysis', 'out-pm-bz12.RDa'))
+
+```
+
+```{r bz24}
+out.pm.bz24 = matrix(nrow = 1, ncol = 5, byrow = T) 
+colnames(out.pm.bz24) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.bz24[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.bz24, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 5, byrow = T) 
+  colnames(out) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
+  out[1,1] <- Y
+  # Ozone
+  out[1,2] <- coef(glm_model)['O3maxh']
+  out[1,3] <- summary(glm_model)$coefficients['O3maxh',2]
+  # PM2.5
+  out[1,4] <- coef(glm_model)['PM']
+  out[1,5] <- summary(glm_model)$coefficients['PM',2] 
+  out.pm.bz24 <- rbind(out.pm.bz24, out) 
+}
+
+save(out.pm.bz24, 
+     file = here('output', 'analysis', 'out-pm-bz24.RDa'))
+
+```
+
+```{r ses - max8h}
+out.ses.8h = matrix(nrow = 1, ncol = 3, byrow = T) 
+colnames(out.ses.8h) <- c("Outcome", "O3_B", "O3_SE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3max8h + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 3, byrow = T) 
+  colnames(out) <- c("Outcome", "O3_B", "O3_SE")
+  out[1,1] <- Y
+  out[1,2] <- coef(glm_model)['O3max8h']
+  out[1,3] <- summary(glm_model)$coefficients['O3max8h', 2]
+  out.ses.8h <- rbind(out.ses.8h, out) 
+}
+save(out.ses.8h, 
+     file = here('output', 'analysis', 'out-ses-8hmax.RDa'))
+
+```
+
+```{r ses - avgh}
+out.ses.h = matrix(nrow = 1, ncol = 3, byrow = T) 
+colnames(out.ses.h) <- c("Outcome", "O3_B", "O3_SE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3avgh + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 3, byrow = T) 
+  colnames(out) <- c("Outcome", "O3_B", "O3_SE")
+  out[1,1] <- Y
+  out[1,2] <- coef(glm_model)['O3avgh']
+  out[1,3] <- summary(glm_model)$coefficients['O3avgh', 2]
+  out.ses.h <- rbind(out.ses.h, out) 
+}
+save(out.ses.h, 
+     file = here('output', 'analysis', 'out-ses-avgh.RDa'))
+
+```
+
+```{r pm - max8h}
+out.pm.8h = matrix(nrow = 1, ncol = 5, byrow = T) 
+colnames(out.pm.8h) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3max8h + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 5, byrow = T) 
+  colnames(out) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
+  out[1,1] <- Y
+  # Ozone
+  out[1,2] <- coef(glm_model)['O3max8h']
+  out[1,3] <- summary(glm_model)$coefficients['O3max8h',2]
+  # PM2.5
+  out[1,4] <- coef(glm_model)['PM']
+  out[1,5] <- summary(glm_model)$coefficients['PM',2] 
+  out.pm.8h <- rbind(out.pm.8h, out) 
+}
+
+save(out.pm.8h, 
+     file = here('output', 'analysis', 'out-pm-8hmax.RDa'))
+
+```
+
+```{r pm - avgh}
+out.pm.h = matrix(nrow = 1, ncol = 5, byrow = T) 
+colnames(out.pm.h) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3avgh + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 5, byrow = T) 
+  colnames(out) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
+  out[1,1] <- Y
+  # Ozone
+  out[1,2] <- coef(glm_model)['O3avgh']
+  out[1,3] <- summary(glm_model)$coefficients['O3avgh',2]
+  # PM2.5
+  out[1,4] <- coef(glm_model)['PM']
+  out[1,5] <- summary(glm_model)$coefficients['PM',2] 
+  out.pm.h <- rbind(out.pm.h, out) 
+}
+
+save(out.pm.h, 
+     file = here('output', 'analysis', 'out-pm-avgh.RDa'))
+
+```
+
+```{r pm - brfss}
+out.pm.brfss = matrix(nrow = 1, ncol = 5, byrow = T) 
+colnames(out.pm.brfss) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
+
+for (Y in cuz){
+  glm_model <- glm(dt.ndi.ozone.brfss[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh + PM + 
+                     X_bmi_Mean + X_raceg_Prop + X_rfsmok_Prop + 
+                     X_diabetes_Prop + X_asthma_Prop + X_rfdrhv_Prop +  
+                     State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.brfss, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 5, byrow = T) 
+  colnames(out) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
+  out[1,1] <- Y
+  # Ozone
+  out[1,2] <- coef(glm_model)['O3maxh']
+  out[1,3] <- summary(glm_model)$coefficients['O3maxh',2]
+  # PM2.5
+  out[1,4] <- coef(glm_model)['PM']
+  out[1,5] <- summary(glm_model)$coefficients['PM',2] 
+  out.pm.brfss <- rbind(out.pm.brfss, out) 
+}
+
+save(out.pm.brfss, 
+     file = here('output', 'analysis', 'out-pm-brfss.RDa'))
+
+```
