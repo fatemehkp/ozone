@@ -70,7 +70,6 @@ knitr::opts_chunk$set(echo = T)
   library(tidyverse)
   library(here)
   library(survival)
-
 ```
 
 ```{r load data}
@@ -89,13 +88,28 @@ cuz <- c("allcuz","nacc","acc",
          "VaD","AD","NeD","UsD",
          "diabt1", "diabt2", "diab",
          "kidn")
+
+cuz1 <- c("allcuz","nacc","acc",
+         "cvd","ihd")
+
+cuz2 <- c("chf","cbv",
+         "resp","copd","pneu","uri")
+
+cuz3 <- c("ards",
+         "canc","lungc",
+         "seps",
+         "VaD","AD")
+
+cuz4 <- c("NeD","UsD",
+         "diabt1", "diabt2", "diab",
+         "kidn")
 ```
 
 ```{r base}
 out.base = matrix(nrow = 1, ncol = 3, byrow = T) 
 colnames(out.base) <- c("Outcome", "O3_B", "O3_SE")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -108,7 +122,7 @@ for (Y in cuz){
   out.base <- rbind(out.base, out) 
 }
 save(out.base, 
-     file = here('output', 'analysis', 'out-base.RDa'))
+     file = here('output', 'analysis', 'out-base-4.RDa'))
 
 ```
 
@@ -116,7 +130,7 @@ save(out.base,
 out.state = matrix(nrow = 1, ncol = 3, byrow = T) 
 colnames(out.state) <- c("Outcome", "O3_B", "O3_SE")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh + State + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -129,7 +143,7 @@ for (Y in cuz){
   out.state <- rbind(out.state, out) 
 }
 save(out.state, 
-     file = here('output', 'analysis', 'out-state.RDa'))
+     file = here('output', 'analysis', 'out-state-4.RDa'))
 
 ```
 
@@ -137,7 +151,7 @@ save(out.state,
 out.ses = matrix(nrow = 1, ncol = 3, byrow = T) 
 colnames(out.ses) <- c("Outcome", "O3_B", "O3_SE")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -150,7 +164,7 @@ for (Y in cuz){
   out.ses <- rbind(out.ses, out) 
 }
 save(out.ses, 
-     file = here('output', 'analysis', 'out-ses.RDa'))
+     file = here('output', 'analysis', 'out-ses-4.RDa'))
 
 ```
 
@@ -158,7 +172,7 @@ save(out.ses,
 out.pm = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(out.pm) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -176,7 +190,7 @@ for (Y in cuz){
 }
 
 save(out.pm, 
-     file = here('output', 'analysis', 'out-pm.RDa'))
+     file = here('output', 'analysis', 'out-pm-4.RDa'))
 
 ```
 
@@ -184,7 +198,7 @@ save(out.pm,
 out.no2 = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(out.no2) <- c("Outcome","O3_B","O3_SE","NO2_B","NO2_SE")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone.no2[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh + NO2 + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -201,7 +215,7 @@ for (Y in cuz){
   out.no2 <- rbind(out.no2, out) 
 }
 save(out.no2, 
-     file = here('output', 'analysis', 'out-no2.RDa'))
+     file = here('output', 'analysis', 'out-no2-4.RDa'))
 
 ```
 
@@ -213,7 +227,7 @@ dt.ndi.ozone.age$age <- relevel(dt.ndi.ozone.age$age, ref = "LE75")
 age.le = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(age.le) <- c("Age_Cat","Outcome","O3_B","O3_SE","pValue")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone.age[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*age + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -229,12 +243,15 @@ for (Y in cuz){
   age.le <- rbind(age.le, out)
 }
 
+save(age.le, 
+     file = here('output', 'analysis', 'out-le-4.RDa'))
+
 ### Age M75
 dt.ndi.ozone.age$age <- relevel(dt.ndi.ozone.age$age, ref = "M75") 
 age.mt = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(age.mt) <- c("Age_Cat","Outcome","O3_B","O3_SE","pValue")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone.age[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*age + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -250,6 +267,9 @@ for (Y in cuz){
   age.mt <- rbind(age.mt, out)
 }
 
+save(age.mt, 
+     file = here('output', 'analysis', 'out-mt-4.RDa'))
+
 out.age <-na.omit(rbind(age.le, age.mt))
 save(out.age, 
      file = here('output', 'analysis', 'out-age.RDa'))
@@ -264,7 +284,7 @@ dt.ndi.ozone$sex <- relevel(dt.ndi.ozone$sex, ref = "F")
 sex.F = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(sex.F) <- c("sex_Cat","Outcome","O3_B","O3_SE","pValue")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*sex + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -281,14 +301,14 @@ for (Y in cuz){
 }
 
 save(sex.F, 
-     file = here('output', 'analysis', 'out-sexF.RDa'))
+     file = here('output', 'analysis', 'out-sexF-4.RDa'))
 
 ### sex Male
 dt.ndi.ozone$sex <- relevel(dt.ndi.ozone$sex, ref = "M") 
 sex.M = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(sex.M) <- c("sex_Cat","Outcome","O3_B","O3_SE","pValue")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*sex + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -305,7 +325,7 @@ for (Y in cuz){
 }
 
 save(sex.M, 
-     file = here('output', 'analysis', 'out-sexM.RDa'))
+     file = here('output', 'analysis', 'out-sexM-4.RDa'))
 
 out.sex <-na.omit(rbind(sex.F, sex.M))
 save(out.sex, 
@@ -321,7 +341,7 @@ dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "A")
 race.A = matrix(nrow = 1, ncol = 8, byrow = T) 
 colnames(race.A) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*race + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -340,14 +360,14 @@ for (Y in cuz){
 }
 
 save(race.A, 
-     file = here('output', 'analysis', 'out-raceA.RDa'))
+     file = here('output', 'analysis', 'out-raceA-4.RDa'))
 
 ### race Black
 dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "B") 
 race.B = matrix(nrow = 1, ncol = 8, byrow = T) 
 colnames(race.B) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*race + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -366,14 +386,14 @@ for (Y in cuz){
 }
 
 save(race.B, 
-     file = here('output', 'analysis', 'out-raceB.RDa'))
+     file = here('output', 'analysis', 'out-raceB-4.RDa'))
 
 ### race Hispanic
 dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "H") 
 race.H = matrix(nrow = 1, ncol = 8, byrow = T) 
 colnames(race.H) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*race + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -392,14 +412,14 @@ for (Y in cuz){
 }
 
 save(race.H, 
-     file = here('output', 'analysis', 'out-raceH.RDa'))
+     file = here('output', 'analysis', 'out-raceH-4.RDa'))
 
 ### race White
 dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "W") 
 race.W = matrix(nrow = 1, ncol = 8, byrow = T) 
 colnames(race.W) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*race + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -418,7 +438,7 @@ for (Y in cuz){
 }
 
 save(race.W, 
-     file = here('output', 'analysis', 'out-raceW.RDa'))
+     file = here('output', 'analysis', 'out-raceW-4.RDa'))
 
 out.race <-na.omit(rbind(race.A, race.B, race.H, race.W))
 save(out.race, 
@@ -438,7 +458,7 @@ dt.ndi.ozone$LocSet <- relevel(dt.ndi.ozone$LocSet, ref = "urban")
 loc.urban = matrix(nrow = 1, ncol = 7, byrow = T) 
 colnames(loc.urban) <- c("Loc_Set","Outcome","O3_B","O3_SE","pU","pS","pR")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*LocSet + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -456,7 +476,7 @@ for (Y in cuz){
 }
 
 save(loc.urban, 
-     file = here('output', 'analysis', 'out-urban.RDa'))
+     file = here('output', 'analysis', 'out-urban-4.RDa'))
 
 
 ### Suburban
@@ -464,7 +484,7 @@ dt.ndi.ozone$LocSet <- relevel(dt.ndi.ozone$LocSet, ref = "suburban")
 loc.suburban = matrix(nrow = 1, ncol = 7, byrow = T) 
 colnames(loc.suburban) <- c("Loc_Set","Outcome","O3_B","O3_SE","pU","pS","pR")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*LocSet + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -482,14 +502,14 @@ for (Y in cuz){
 }
 
 save(loc.suburban, 
-     file = here('output', 'analysis', 'out-suburban.RDa'))
+     file = here('output', 'analysis', 'out-suburban-4.RDa'))
 
 ### Rural
 dt.ndi.ozone$LocSet <- relevel(dt.ndi.ozone$LocSet, ref = "rural") 
 loc.rural = matrix(nrow = 1, ncol = 7, byrow = T) 
 colnames(loc.rural) <- c("Loc_Set","Outcome","O3_B","O3_SE","pU","pS","pR")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*LocSet + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -507,7 +527,7 @@ for (Y in cuz){
 }
 
 save(loc.rural, 
-     file = here('output', 'analysis', 'out-rural.RDa'))
+     file = here('output', 'analysis', 'out-rural-4.RDa'))
 
 ```
 
@@ -520,7 +540,7 @@ dt.ndi.ozone.urban.sescat$sescat <- relevel(dt.ndi.ozone.urban.sescat$sescat,
 ses.Low = matrix(nrow = 1, ncol = 7, byrow = T) 
 colnames(ses.Low) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone.urban.sescat[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*sescat + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -538,7 +558,7 @@ for (Y in cuz){
 }
 
 save(ses.Low, 
-     file = here('output', 'analysis', 'out-sesL.RDa'))
+     file = here('output', 'analysis', 'out-sesL-4.RDa'))
 
 
 ### Middle SES
@@ -547,7 +567,7 @@ dt.ndi.ozone.urban.sescat$sescat <- relevel(dt.ndi.ozone.urban.sescat$sescat,
 ses.Mid = matrix(nrow = 1, ncol = 7, byrow = T) 
 colnames(ses.Mid) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone.urban.sescat[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*sescat + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -565,7 +585,7 @@ for (Y in cuz){
 }
 
 save(ses.Mid, 
-     file = here('output', 'analysis', 'out-sesM.RDa'))
+     file = here('output', 'analysis', 'out-sesM-4.RDa'))
 
 ### High SES
 dt.ndi.ozone.urban.sescat$sescat <- relevel(dt.ndi.ozone.urban.sescat$sescat,
@@ -573,7 +593,7 @@ dt.ndi.ozone.urban.sescat$sescat <- relevel(dt.ndi.ozone.urban.sescat$sescat,
 ses.High = matrix(nrow = 1, ncol = 7, byrow = T) 
 colnames(ses.High) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone.urban.sescat[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*sescat + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -591,7 +611,7 @@ for (Y in cuz){
 }
 
 save(ses.High, 
-     file = here('output', 'analysis', 'out-sesH.RDa'))
+     file = here('output', 'analysis', 'out-sesH-4.RDa'))
 
 ```
 
@@ -604,7 +624,7 @@ dt.ndi.ozone.urbsub.sescat$sescat <- relevel(dt.ndi.ozone.urbsub.sescat$sescat,
 ses.Low = matrix(nrow = 1, ncol = 7, byrow = T) 
 colnames(ses.Low) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone.urbsub.sescat[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*sescat + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -622,7 +642,7 @@ for (Y in cuz){
 }
 
 save(ses.Low, 
-     file = here('output', 'analysis', 'out-sesL-2.RDa'))
+     file = here('output', 'analysis', 'out-sesL-II-4.RDa'))
 
 
 ### Middle SES
@@ -631,7 +651,7 @@ dt.ndi.ozone.urbsub.sescat$sescat <- relevel(dt.ndi.ozone.urbsub.sescat$sescat,
 ses.Mid = matrix(nrow = 1, ncol = 7, byrow = T) 
 colnames(ses.Mid) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone.urbsub.sescat[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*sescat + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -649,7 +669,7 @@ for (Y in cuz){
 }
 
 save(ses.Mid, 
-     file = here('output', 'analysis', 'out-sesM-2.RDa'))
+     file = here('output', 'analysis', 'out-sesM-II-4.RDa'))
 
 ### High SES
 dt.ndi.ozone.urbsub.sescat$sescat <- relevel(dt.ndi.ozone.urbsub.sescat$sescat,
@@ -657,7 +677,7 @@ dt.ndi.ozone.urbsub.sescat$sescat <- relevel(dt.ndi.ozone.urbsub.sescat$sescat,
 ses.High = matrix(nrow = 1, ncol = 7, byrow = T) 
 colnames(ses.High) <- c("SES_cat","Outcome","O3_B","O3_SE","pL","pM","pH")
 
-for (Y in cuz){
+for (Y in cuz4){
   glm_model <- glm(dt.ndi.ozone.urbsub.sescat[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*sescat + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -675,7 +695,7 @@ for (Y in cuz){
 }
 
 save(ses.High, 
-     file = here('output', 'analysis', 'out-sesH-2.RDa'))
+     file = here('output', 'analysis', 'out-sesH-II-4.RDa'))
 
 ```
 
@@ -691,7 +711,7 @@ dt.ndi.ozone$region <- relevel(dt.ndi.ozone$region, ref = "W")
 region.W = matrix(nrow = 1, ncol = 8, byrow = T) 
 colnames(region.W) <- c("region_Cat","Outcome","O3_B","O3_SE","pW","pMW","pS","pNE")
 
-for (Y in cuz){
+for (Y in cuz1){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*region + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -710,14 +730,14 @@ for (Y in cuz){
 }
 
 save(region.W, 
-     file = here('output', 'analysis', 'out-west.RDa'))
+     file = here('output', 'analysis', 'out-west-1.RDa'))
 
 ### Midwest
 dt.ndi.ozone$region <- relevel(dt.ndi.ozone$region, ref = "MW") 
 region.MW = matrix(nrow = 1, ncol = 8, byrow = T) 
 colnames(region.MW) <- c("region_Cat","Outcome","O3_B","O3_SE","pW","pMW","pS","pNE")
 
-for (Y in cuz){
+for (Y in cuz1){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*region + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -736,14 +756,14 @@ for (Y in cuz){
 }
 
 save(region.MW, 
-     file = here('output', 'analysis', 'out-midwest.RDa'))
+     file = here('output', 'analysis', 'out-midwest-1.RDa'))
 
 ### South
 dt.ndi.ozone$region <- relevel(dt.ndi.ozone$region, ref = "S") 
 region.S = matrix(nrow = 1, ncol = 8, byrow = T) 
 colnames(region.S) <- c("region_Cat","Outcome","O3_B","O3_SE","pW","pMW","pS","pNE")
 
-for (Y in cuz){
+for (Y in cuz1){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*region + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -762,14 +782,14 @@ for (Y in cuz){
 }
 
 save(region.S, 
-     file = here('output', 'analysis', 'out-south.RDa'))
+     file = here('output', 'analysis', 'out-south-1.RDa'))
 
 ### Northeast
 dt.ndi.ozone$region <- relevel(dt.ndi.ozone$region, ref = "NE") 
 region.NE = matrix(nrow = 1, ncol = 8, byrow = T) 
 colnames(region.NE) <- c("region_Cat","Outcome","O3_B","O3_SE","pW","pMW","pS","pNE")
 
-for (Y in cuz){
+for (Y in cuz1){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*region + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -788,7 +808,7 @@ for (Y in cuz){
 }
 
 save(region.NE, 
-     file = here('output', 'analysis', 'out-northeast.RDa'))
+     file = here('output', 'analysis', 'out-northeast-1.RDa'))
 
 #out.race <-na.omit(rbind(race.A, race.B, race.H, race.N, race.W))
 #save(out.race, 
@@ -800,7 +820,7 @@ save(region.NE,
 out.pm.bz12 = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(out.pm.bz12) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
 
-for (Y in cuz){
+for (Y in cuz1){
   glm_model <- glm(dt.ndi.ozone.bz12[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -818,7 +838,7 @@ for (Y in cuz){
 }
 
 save(out.pm.bz12, 
-     file = here('output', 'analysis', 'out-pm-bz12.RDa'))
+     file = here('output', 'analysis', 'out-pm-bz12-1.RDa'))
 
 ```
 
@@ -826,7 +846,7 @@ save(out.pm.bz12,
 out.pm.bz24 = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(out.pm.bz24) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
 
-for (Y in cuz){
+for (Y in cuz1){
   glm_model <- glm(dt.ndi.ozone.bz24[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -844,7 +864,7 @@ for (Y in cuz){
 }
 
 save(out.pm.bz24, 
-     file = here('output', 'analysis', 'out-pm-bz24.RDa'))
+     file = here('output', 'analysis', 'out-pm-bz24-1.RDa'))
 
 ```
 
@@ -852,7 +872,7 @@ save(out.pm.bz24,
 out.ses.8h = matrix(nrow = 1, ncol = 3, byrow = T) 
 colnames(out.ses.8h) <- c("Outcome", "O3_B", "O3_SE")
 
-for (Y in cuz){
+for (Y in cuz1){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3max8h + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -865,7 +885,7 @@ for (Y in cuz){
   out.ses.8h <- rbind(out.ses.8h, out) 
 }
 save(out.ses.8h, 
-     file = here('output', 'analysis', 'out-ses-8hmax.RDa'))
+     file = here('output', 'analysis', 'out-ses-8hmax-1.RDa'))
 
 ```
 
@@ -873,7 +893,7 @@ save(out.ses.8h,
 out.ses.h = matrix(nrow = 1, ncol = 3, byrow = T) 
 colnames(out.ses.h) <- c("Outcome", "O3_B", "O3_SE")
 
-for (Y in cuz){
+for (Y in cuz1){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3avgh + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -886,7 +906,7 @@ for (Y in cuz){
   out.ses.h <- rbind(out.ses.h, out) 
 }
 save(out.ses.h, 
-     file = here('output', 'analysis', 'out-ses-avgh.RDa'))
+     file = here('output', 'analysis', 'out-ses-avgh-1.RDa'))
 
 ```
 
@@ -894,7 +914,7 @@ save(out.ses.h,
 out.pm.8h = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(out.pm.8h) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
 
-for (Y in cuz){
+for (Y in cuz1){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3max8h + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -912,7 +932,7 @@ for (Y in cuz){
 }
 
 save(out.pm.8h, 
-     file = here('output', 'analysis', 'out-pm-8hmax.RDa'))
+     file = here('output', 'analysis', 'out-pm-8hmax-1.RDa'))
 
 ```
 
@@ -920,7 +940,7 @@ save(out.pm.8h,
 out.pm.h = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(out.pm.h) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
 
-for (Y in cuz){
+for (Y in cuz1){
   glm_model <- glm(dt.ndi.ozone[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3avgh + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
@@ -938,7 +958,7 @@ for (Y in cuz){
 }
 
 save(out.pm.h, 
-     file = here('output', 'analysis', 'out-pm-avgh.RDa'))
+     file = here('output', 'analysis', 'out-pm-avgh-1.RDa'))
 
 ```
 
@@ -946,7 +966,7 @@ save(out.pm.h,
 out.pm.brfss = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(out.pm.brfss) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
 
-for (Y in cuz){
+for (Y in cuz1){
   glm_model <- glm(dt.ndi.ozone.brfss[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh + PM + 
                      X_bmi_Mean + X_raceg_Prop + X_rfsmok_Prop + 
@@ -967,6 +987,6 @@ for (Y in cuz){
 }
 
 save(out.pm.brfss, 
-     file = here('output', 'analysis', 'out-pm-brfss.RDa'))
+     file = here('output', 'analysis', 'out-pm-brfss-1.RDa'))
 
 ```
