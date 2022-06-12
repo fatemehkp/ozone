@@ -2,7 +2,7 @@
 title: "The Impact of Long-Term O3 Exposure on Specific Causes of Death"
 substitle: "Effect Modification in a US Medicare Cohort"
 author: "Fatemeh Kazemi"
-date: "2/20/2021"
+date: "6/211/2022"
 output: html_document
 ---
 
@@ -59,7 +59,7 @@ output: html_document
     1. 
     
 ###
-srun -p short --pty --export=ALL -N 1 --mem=200Gb --time=24:00:00 /bin/bash
+srun --partition=short  --nodes 1 --ntasks 1 --cpus-per-task 2 --pty --export=ALL --mem=200G --time=24:00:00 /bin/bash
 /shared/centos7/r-project/3.6.1/bin/R
 
 ```{r setup, include=FALSE}
@@ -70,6 +70,10 @@ knitr::opts_chunk$set(echo = T)
   library(tidyverse)
   library(here)
   library(survival)
+  library(stringi)
+
+  library(rms)
+  library(pspline)
 ```
 
 ```{r load data}
@@ -142,7 +146,6 @@ for (Y in cuz4){
 }
 save(out.base, 
      file = here('output', 'analysis', 'out-base-4.RDa'))
-
 ```
 
 ```{r state}
@@ -163,10 +166,9 @@ for (Y in cuz4){
 }
 save(out.state, 
      file = here('output', 'analysis', 'out-state-4.RDa'))
-
 ```
 
-```{r ses}
+```{r state + ses}
 out.ses = matrix(nrow = 1, ncol = 3, byrow = T) 
 colnames(out.ses) <- c("Outcome", "O3_B", "O3_SE")
 
@@ -184,10 +186,9 @@ for (Y in cuz4){
 }
 save(out.ses, 
      file = here('output', 'analysis', 'out-ses-4.RDa'))
-
 ```
 
-```{r pm}
+```{r state + ses + pm}
 out.pm = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(out.pm) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
 
@@ -210,10 +211,9 @@ for (Y in cuz4){
 
 save(out.pm, 
      file = here('output', 'analysis', 'out-pm-4.RDa'))
-
 ```
 
-```{r no2}
+```{r state + ses + no2}
 out.no2 = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(out.no2) <- c("Outcome","O3_B","O3_SE","NO2_B","NO2_SE")
 
@@ -235,10 +235,9 @@ for (Y in cuz4){
 }
 save(out.no2, 
      file = here('output', 'analysis', 'out-no2-4.RDa'))
-
 ```
 
-```{r age}
+```{r state + ses + pm - age}
 dt.ndi.ozone.age$age<-as.factor(dt.ndi.ozone.age$age)
 
 ### Age LE75
@@ -292,10 +291,9 @@ save(age.mt,
 out.age <-na.omit(rbind(age.le, age.mt))
 save(out.age, 
      file = here('output', 'analysis', 'out-age.RDa'))
-
 ```
 
-```{r sex}
+```{r state + ses + pm - sex}
 dt.ndi.ozone$sex<-as.factor(dt.ndi.ozone$sex)
 
 ### sex Female
@@ -349,124 +347,136 @@ save(sex.M,
 out.sex <-na.omit(rbind(sex.F, sex.M))
 save(out.sex, 
      file = here('output', 'analysis', 'out-sex.RDa'))
-
 ```
 
-```{r race}
-dt.ndi.ozone.race$race <- as.factor(dt.ndi.ozone.race$race)
-
+```{r state + ses + pm - race}
 ### race Asian
-dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "A") 
-race.A = matrix(nrow = 1, ncol = 8, byrow = T) 
-colnames(race.A) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+dt.ndi.ozone.race <- dt.ndi.ozone.race %>% 
+  mutate(race = as.factor(case_when(race != "A" ~ "O",
+                          T ~ as.character(race))),
+         StrID = stri_replace_all_regex(StrID,
+                                  pattern = c('B', 'H', 'W'),
+                                  replacement = c('O'), vectorize = F),
+         race = relevel(race, ref = "A"))
 
-for (Y in cuz7){
+race.A = matrix(nrow = 1, ncol = 5, byrow = T) 
+colnames(race.A) <- c("race_Cat","Outcome","O3_B","O3_SE","pValue")
+
+for (Y in cuz1){
   glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*race + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
                    data = dt.ndi.ozone.race, family = poisson(link = "log"))
-  out = matrix(nrow = 1, ncol = 8, byrow = T) 
-  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
-  out[1,1]<- "A" 
+  out = matrix(nrow = 1, ncol = 5, byrow = T) 
+  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pValue")
+  out[1,1]<- "Asian" 
   out[1,2]<- Y
   # Ozone
   out[1,3] <- coef(glm_model)['O3maxh']
   out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
-  out[1,6] <- summary(glm_model)$coefficients['O3maxh:raceB',4]
-  out[1,7] <- summary(glm_model)$coefficients['O3maxh:raceH',4]
-  out[1,8] <- summary(glm_model)$coefficients['O3maxh:raceW',4]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:raceO',4]
   race.A <- rbind(race.A, out)
 }
 
 save(race.A, 
-     file = here('output', 'analysis', 'out-raceA-7.RDa'))
+     file = here('output', 'analysis', 'out-raceA-1.RDa'))
 
 ### race Black
-dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "B") 
-race.B = matrix(nrow = 1, ncol = 8, byrow = T) 
-colnames(race.B) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+dt.ndi.ozone.race <- dt.ndi.ozone.race %>% 
+  mutate(race = as.factor(case_when(race != "B" ~ "O",
+                          T ~ as.character(race))),
+         StrID = stri_replace_all_regex(StrID,
+                                  pattern = c('A', 'H', 'W'),
+                                  replacement = c('O'), vectorize = F),
+         race = relevel(race, ref = "B"))
 
-for (Y in cuz7){
+race.B = matrix(nrow = 1, ncol = 5, byrow = T) 
+colnames(race.B) <- c("race_Cat","Outcome","O3_B","O3_SE","pValue")
+
+for (Y in cuz1){
   glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*race + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
                    data = dt.ndi.ozone.race, family = poisson(link = "log"))
-  out = matrix(nrow = 1, ncol = 8, byrow = T) 
-  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
-  out[1,1] <- "B" 
-  out[1,2] <- Y
+  out = matrix(nrow = 1, ncol = 5, byrow = T) 
+  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pValue")
+  out[1,1]<- "Black" 
+  out[1,2]<- Y
   # Ozone
   out[1,3] <- coef(glm_model)['O3maxh']
   out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
-  out[1,5] <- summary(glm_model)$coefficients['O3maxh:raceA',4]
-  out[1,7] <- summary(glm_model)$coefficients['O3maxh:raceH',4]
-  out[1,8] <- summary(glm_model)$coefficients['O3maxh:raceW',4]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:raceO',4]
   race.B <- rbind(race.B, out)
 }
 
 save(race.B, 
-     file = here('output', 'analysis', 'out-raceB-7.RDa'))
+     file = here('output', 'analysis', 'out-raceB-1.RDa'))
 
 ### race Hispanic
-dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "H") 
-race.H = matrix(nrow = 1, ncol = 8, byrow = T) 
-colnames(race.H) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+dt.ndi.ozone.race <- dt.ndi.ozone.race %>% 
+  mutate(race = as.factor(case_when(race != "H" ~ "O",
+                          T ~ as.character(race))),
+         StrID = stri_replace_all_regex(StrID,
+                                  pattern = c('A', 'B', 'W'),
+                                  replacement = c('O'), vectorize = F),
+         race = relevel(race, ref = "H"))
 
-for (Y in cuz3){
+race.H = matrix(nrow = 1, ncol = 5, byrow = T) 
+colnames(race.H) <- c("race_Cat","Outcome","O3_B","O3_SE","pValue")
+
+for (Y in cuz1){
   glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*race + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
                    data = dt.ndi.ozone.race, family = poisson(link = "log"))
-  out = matrix(nrow = 1, ncol = 8, byrow = T) 
-  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
-  out[1,1] <- "H" 
-  out[1,2] <- Y
+  out = matrix(nrow = 1, ncol = 5, byrow = T) 
+  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pValue")
+  out[1,1]<- "Hispanic" 
+  out[1,2]<- Y
   # Ozone
   out[1,3] <- coef(glm_model)['O3maxh']
   out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
-  out[1,5] <- summary(glm_model)$coefficients['O3maxh:raceA',4]
-  out[1,6] <- summary(glm_model)$coefficients['O3maxh:raceB',4]
-  out[1,8] <- summary(glm_model)$coefficients['O3maxh:raceW',4]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:raceO',4]
   race.H <- rbind(race.H, out)
 }
 
 save(race.H, 
-     file = here('output', 'analysis', 'out-raceH-3.RDa'))
+     file = here('output', 'analysis', 'out-raceH-1.RDa'))
 
 ### race White
-dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "W") 
-race.W = matrix(nrow = 1, ncol = 8, byrow = T) 
-colnames(race.W) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+dt.ndi.ozone.race <- dt.ndi.ozone.race %>% 
+  mutate(race = as.factor(case_when(race != "W" ~ "O",
+                          T ~ as.character(race))),
+         StrID = stri_replace_all_regex(StrID,
+                                  pattern = c('A', 'B', 'H'),
+                                  replacement = c('O'), vectorize = F),
+         race = relevel(race, ref = "W"))
 
-for (Y in cuz7){
+race.W = matrix(nrow = 1, ncol = 5, byrow = T) 
+colnames(race.W) <- c("race_Cat","Outcome","O3_B","O3_SE","pValue")
+
+for (Y in cuz1){
   glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
                      O3maxh*race + PM + State + ses + strata(StrID), 
                    offset = (log(no_enrollee)), 
                    data = dt.ndi.ozone.race, family = poisson(link = "log"))
-  out = matrix(nrow = 1, ncol = 8, byrow = T) 
-  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
-  out[1,1] <- "W" 
-  out[1,2] <- Y
+  out = matrix(nrow = 1, ncol = 5, byrow = T) 
+  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pValue")
+  out[1,1]<- "White" 
+  out[1,2]<- Y
   # Ozone
   out[1,3] <- coef(glm_model)['O3maxh']
   out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
-  out[1,5] <- summary(glm_model)$coefficients['O3maxh:raceA',4]
-  out[1,6] <- summary(glm_model)$coefficients['O3maxh:raceB',4]
-  out[1,7] <- summary(glm_model)$coefficients['O3maxh:raceH',4]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:raceO',4]
   race.W <- rbind(race.W, out)
 }
 
 save(race.W, 
-     file = here('output', 'analysis', 'out-raceW-7.RDa'))
-
-out.race <-na.omit(rbind(race.A, race.B, race.H, race.W))
-save(out.race, 
-     file = here('output', 'analysis', 'out-race.RDa'))
-
+     file = here('output', 'analysis', 'out-raceW-1.RDa'))
 ```
 
 
-```{r Urbanicity}
+```{r state + ses + pm - urbanicity}
 dt.ndi.ozone <- dt.ndi.ozone %>% 
   mutate(LocSet = ifelse(LocationSetting == "URBAN AND CENTER CITY", "urban",
                          ifelse(LocationSetting == "SUBURBAN", "suburban", "rural")),
@@ -547,10 +557,9 @@ for (Y in cuz4){
 
 save(loc.rural, 
      file = here('output', 'analysis', 'out-rural-4.RDa'))
-
 ```
 
-```{r Urban SES cat}
+```{r state + ses + pm - urban SES cat}
 dt.ndi.ozone.urban.sescat$sescat<-as.factor(dt.ndi.ozone.urban.sescat$sescat)
 
 ### Low SES
@@ -631,10 +640,9 @@ for (Y in cuz4){
 
 save(ses.High, 
      file = here('output', 'analysis', 'out-sesH-4.RDa'))
-
 ```
 
-```{r Urban and Suburban SES cat}
+```{r state + ses + pm - urban and suburban SES cat}
 dt.ndi.ozone.urbsub.sescat$sescat<-as.factor(dt.ndi.ozone.urbsub.sescat$sescat)
 
 ### Low SES
@@ -715,10 +723,9 @@ for (Y in cuz4){
 
 save(ses.High, 
      file = here('output', 'analysis', 'out-sesH-II-4.RDa'))
-
 ```
 
-```{r Region}
+```{r state + ses + pm - region}
 dt.ndi.ozone <- dt.ndi.ozone %>% 
   mutate(region = ifelse(RegionIV == 1, "W",
                          ifelse(RegionIV == 2, "MW",
@@ -832,10 +839,9 @@ save(region.NE,
 #out.race <-na.omit(rbind(race.A, race.B, race.H, race.N, race.W))
 #save(out.race, 
 #     file = here('output', 'analysis', 'out-race.RDa'))
-
 ```
 
-```{r bz12}
+```{r state + ses + pm - bz12}
 out.pm.bz12 = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(out.pm.bz12) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
 
@@ -858,10 +864,9 @@ for (Y in cuz4){
 
 save(out.pm.bz12, 
      file = here('output', 'analysis', 'out-pm-bz12-4.RDa'))
-
 ```
 
-```{r bz24}
+```{r state + ses + pm - bz24}
 out.pm.bz24 = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(out.pm.bz24) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
 
@@ -884,10 +889,9 @@ for (Y in cuz4){
 
 save(out.pm.bz24, 
      file = here('output', 'analysis', 'out-pm-bz24-4.RDa'))
-
 ```
 
-```{r ses - max8h}
+```{r state + ses - max8h}
 out.ses.8h = matrix(nrow = 1, ncol = 3, byrow = T) 
 colnames(out.ses.8h) <- c("Outcome", "O3_B", "O3_SE")
 
@@ -905,10 +909,9 @@ for (Y in cuz4){
 }
 save(out.ses.8h, 
      file = here('output', 'analysis', 'out-ses-8hmax-4.RDa'))
-
 ```
 
-```{r ses - avgh}
+```{r state + ses - avgh}
 out.ses.h = matrix(nrow = 1, ncol = 3, byrow = T) 
 colnames(out.ses.h) <- c("Outcome", "O3_B", "O3_SE")
 
@@ -926,10 +929,9 @@ for (Y in cuz4){
 }
 save(out.ses.h, 
      file = here('output', 'analysis', 'out-ses-avgh-4.RDa'))
-
 ```
 
-```{r pm - max8h}
+```{r state + ses + pm - max8h}
 out.pm.8h = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(out.pm.8h) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
 
@@ -952,10 +954,9 @@ for (Y in cuz4){
 
 save(out.pm.8h, 
      file = here('output', 'analysis', 'out-pm-8hmax-4.RDa'))
-
 ```
 
-```{r pm - avgh}
+```{r state + ses + pm - avgh}
 out.pm.h = matrix(nrow = 1, ncol = 5, byrow = T) 
 colnames(out.pm.h) <- c("Outcome","O3_B","O3_SE","PM_B","PM_SE")
 
@@ -978,7 +979,6 @@ for (Y in cuz4){
 
 save(out.pm.h, 
      file = here('output', 'analysis', 'out-pm-avgh-4.RDa'))
-
 ```
 
 ```{r pm - brfss0}
@@ -1004,7 +1004,6 @@ for (Y in cuz4){
 
 save(out.pm.brfss0, 
      file = here('output', 'analysis', 'out-pm-brfss0-4.RDa'))
-
 ```
 
 ```{r pm - brfss}
@@ -1033,5 +1032,117 @@ for (Y in cuz7){
 
 save(out.pm.brfss, 
      file = here('output', 'analysis', 'out-pm-brfss-7.RDa'))
+```
+
+```{r state + ses + pm - race - multi-level}
+dt.ndi.ozone.race$race <- as.factor(dt.ndi.ozone.race$race)
+
+### race Asian
+dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "A") 
+race.A = matrix(nrow = 1, ncol = 8, byrow = T) 
+colnames(race.A) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+
+for (Y in cuz7){
+  glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*race + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.race, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 8, byrow = T) 
+  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+  out[1,1]<- "A" 
+  out[1,2]<- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,6] <- summary(glm_model)$coefficients['O3maxh:raceB',4]
+  out[1,7] <- summary(glm_model)$coefficients['O3maxh:raceH',4]
+  out[1,8] <- summary(glm_model)$coefficients['O3maxh:raceW',4]
+  race.A <- rbind(race.A, out)
+}
+
+save(race.A, 
+     file = here('output', 'analysis', 'out-raceA-7.RDa'))
+
+### race Black
+dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "B") 
+race.B = matrix(nrow = 1, ncol = 8, byrow = T) 
+colnames(race.B) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+
+for (Y in cuz7){
+  glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*race + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.race, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 8, byrow = T) 
+  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+  out[1,1] <- "B" 
+  out[1,2] <- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:raceA',4]
+  out[1,7] <- summary(glm_model)$coefficients['O3maxh:raceH',4]
+  out[1,8] <- summary(glm_model)$coefficients['O3maxh:raceW',4]
+  race.B <- rbind(race.B, out)
+}
+
+save(race.B, 
+     file = here('output', 'analysis', 'out-raceB-7.RDa'))
+
+### race Hispanic
+dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "H") 
+race.H = matrix(nrow = 1, ncol = 8, byrow = T) 
+colnames(race.H) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+
+for (Y in cuz3){
+  glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*race + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.race, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 8, byrow = T) 
+  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+  out[1,1] <- "H" 
+  out[1,2] <- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:raceA',4]
+  out[1,6] <- summary(glm_model)$coefficients['O3maxh:raceB',4]
+  out[1,8] <- summary(glm_model)$coefficients['O3maxh:raceW',4]
+  race.H <- rbind(race.H, out)
+}
+
+save(race.H, 
+     file = here('output', 'analysis', 'out-raceH-3.RDa'))
+
+### race White
+dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "W") 
+race.W = matrix(nrow = 1, ncol = 8, byrow = T) 
+colnames(race.W) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+
+for (Y in cuz7){
+  glm_model <- glm(dt.ndi.ozone.race[ ,paste0('no_death_', Y, sep = "")] ~ 
+                     O3maxh*race + PM + State + ses + strata(StrID), 
+                   offset = (log(no_enrollee)), 
+                   data = dt.ndi.ozone.race, family = poisson(link = "log"))
+  out = matrix(nrow = 1, ncol = 8, byrow = T) 
+  colnames(out) <- c("race_Cat","Outcome","O3_B","O3_SE","pA","pB","pH","pW")
+  out[1,1] <- "W" 
+  out[1,2] <- Y
+  # Ozone
+  out[1,3] <- coef(glm_model)['O3maxh']
+  out[1,4] <- summary(glm_model)$coefficients['O3maxh',2]
+  out[1,5] <- summary(glm_model)$coefficients['O3maxh:raceA',4]
+  out[1,6] <- summary(glm_model)$coefficients['O3maxh:raceB',4]
+  out[1,7] <- summary(glm_model)$coefficients['O3maxh:raceH',4]
+  race.W <- rbind(race.W, out)
+}
+
+save(race.W, 
+     file = here('output', 'analysis', 'out-raceW-7.RDa'))
+
+out.race <-na.omit(rbind(race.A, race.B, race.H, race.W))
+save(out.race, 
+     file = here('output', 'analysis', 'out-race.RDa'))
 
 ```
