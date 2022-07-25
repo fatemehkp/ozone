@@ -20,7 +20,7 @@ library(lubridate)
 # d : minimum number of days per month
 # m : minimum numbers of month per year
 # y : minimum numbers of years per period
-# Packages: tidyverse; data.table
+# Packages: tidyverse; lubridate
 
 Air.Hourly.Process <- function(dt, m1, m2, h, d, m, y) {
   # identify qualified monitors and merged it with dt (hourly dataset)

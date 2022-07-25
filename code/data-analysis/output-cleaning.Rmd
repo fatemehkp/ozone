@@ -1,5 +1,7 @@
 ---
-title: "Analysis Output files"
+title: "Ozone Paper Analysis output files"
+author: "Fatemeh Kazemi"
+date: "6-11-2022"
 ---
 
 https://cran.r-project.org/web/packages/forestplot/vignettes/forestplot.html
@@ -12,9 +14,6 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 ```{r load packages}
 library(tidyverse)
 library(here)
-```
-
-```{r Load data}
 ```
 
 ```{r Outcome to Cause }
@@ -55,7 +54,7 @@ cuz <- c("All-Cause", "Non-Accidental", "Accidental", "Cardiovascular",
 ```{r Output Base}
 out.base.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis', 'New folder', paste('out-base-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-base-',i,'.RDa', sep= "")))
   out.base.t  <-  rbind(out.base.t, out.base) %>% drop_na()
   }
 
@@ -76,7 +75,7 @@ rm(out.base.t)
 ```{r Output State}
 out.state.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis', 'New folder', paste('out-state-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-state-',i,'.RDa', sep= "")))
   out.state.t  <-  rbind(out.state.t, out.state) %>% drop_na()
   }
 
@@ -97,7 +96,7 @@ rm(out.state.t)
 ```{r Output SES}
 out.ses.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder', paste('out-ses-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-ses-',i,'.RDa', sep= "")))
   out.ses.t  <-  rbind(out.ses.t, out.ses) %>% drop_na()
   }
 
@@ -118,7 +117,7 @@ rm(out.ses.t)
 ```{r Output PM}
 out.pm25.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis', 'New folder', paste('out-pm-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-pm-',i,'.RDa', sep= "")))
   out.pm25.t  <-  rbind(out.pm25.t, out.pm) %>% drop_na()
   }
 
@@ -139,7 +138,7 @@ rm(out.pm25.t, out.pm)
 ```{r Output NO2}
 out.no2.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder', paste('out-no2-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-no2-',i,'.RDa', sep= "")))
   out.no2.t  <-  rbind(out.no2.t, out.no2) %>% drop_na()
   }
 
@@ -174,13 +173,13 @@ save(out.main, file = here('output','analysis','out-main.RDa'))
 ```{r Output Age}
 out.le.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis', 'New folder', paste('out-le-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-le-',i,'.RDa', sep= "")))
   out.le.t  <-  rbind(out.le.t, age.le) %>% drop_na()
   }
 
 out.mt.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis', 'New folder', paste('out-mt-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-mt-',i,'.RDa', sep= "")))
   out.mt.t  <-  rbind(out.mt.t, age.mt) %>% drop_na()
   }
 
@@ -209,13 +208,13 @@ rm(out.le.t, out.mt.t, out.age.t, age.le, age.mt)
 ```{r Output Sex}
 out.f.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis', 'New folder', paste('out-sexF-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-sexF-',i,'.RDa', sep= "")))
   out.f.t  <-  rbind(out.f.t, sex.F) %>% drop_na()
   }
 
 out.m.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis', 'New folder', paste('out-sexM-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-sexM-',i,'.RDa', sep= "")))
   out.m.t  <-  rbind(out.m.t, sex.M) %>% drop_na()
   }
 
@@ -241,24 +240,98 @@ save(out.sex, file = here('output','analysis','out-sex.RDa'))
 rm(out.f.t, out.m.t, out.sex.t, sex.F, sex.M)
 ```
 
+```{r Output Race}
+out.A.t = data.frame()
+for (i in 1:4){
+  load(here('output','analysis','out',paste('out-raceA-',i,'.RDa', sep= "")))
+  out.A.t  <-  rbind(out.A.t, race.A) %>% drop_na()
+  }
+
+out.B.t = data.frame()
+for (i in 1:4){
+  load(here('output','analysis','out',paste('out-raceB-',i,'.RDa', sep= "")))
+  out.B.t  <-  rbind(out.B.t, race.B) %>% drop_na()
+  }
+
+out.H.t = data.frame()
+for (i in 1:4){
+  load(here('output','analysis','out',paste('out-raceH-',i,'.RDa', sep= "")))
+  out.H.t  <-  rbind(out.H.t, race.H) %>% drop_na()
+  }
+
+out.W.t = data.frame()
+for (i in 1:4){
+  load(here('output','analysis','out',paste('out-raceW-',i,'.RDa', sep= "")))
+  out.W.t  <-  rbind(out.W.t, race.W) %>% drop_na()
+  }
+
+out.race.t <- out.A.t %>% 
+  add_row(out.B.t) %>% 
+  add_row(out.H.t) %>% 
+  add_row(out.W.t)
+  
+out.race <- out.race.t %>% 
+  merge(Outcome.to.Cause) %>% 
+  mutate(Coef = as.numeric(as.character(O3_B)),
+         std = as.numeric(as.character(O3_SE)),
+         HR = round(exp(Coef * 10/1000),3),
+         HR.L = round(exp((Coef-1.96*std) * 10/1000),3),
+         HR.U = round(exp((Coef+1.96*std) * 10/1000),3),
+         Subgroup = "Race", 
+         Value = race_Cat,
+         Value = factor(Value, 
+                        levels = c("White", "Hispanic", "Black", "Asian")),
+         Cause = factor(Cause, levels = cuz)) %>% 
+  select(Cause, Subgroup, Value, HR, HR.L, HR.U, pValue)
+
+save(out.race, file = here('output','analysis','out-race.RDa'))
+
+rm(out.A.t, out.B.t, out.H.t, out.W.t, out.race.t, 
+   race.A, race.B, race.H, race.W)
+```
+
+```{r}
+out.asr <- out.age %>% 
+  add_row(out.sex) %>% 
+  add_row(out.race) %>% 
+  mutate(tag = case_when(Value %in% c('White') ~ 'a',
+                         Value %in% c('Male', '>75', 'Hispanic') ~ 'b',
+                         Value %in% c('Female', '65-75', 'Black') ~ 'c',
+                         T ~ 'd'))
+
+out.miss <- out.race %>% 
+  mutate(Subgroup = case_when(Value %in% c('Asian', 'Black') ~ 'Age',
+                              T ~ 'Sex'),
+         tag = case_when(Value %in% c('Asian', 'Hispanic') ~ 'a',
+                         T ~ 'd'))
+out.miss[, 3:7] <- NA
+
+out.asr <- out.asr %>% 
+  add_row(out.miss) %>% 
+  arrange(Cause, Subgroup, Value, tag) %>% 
+  mutate(Subgroup = factor(Subgroup, levels = c("Age", "Sex", "Race")))
+
+save(out.asr, file = here('output','analysis','out-asr.RDa'))
+```
+
 ```{r Output Urbanicity}
 out.urban.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis', 'New folder', paste('out-urban-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-urban-',i,'.RDa', sep= "")))
   out.urban.t  <-  rbind(out.urban.t, loc.urban) %>% 
     filter(!is.na(Outcome))
   }
 
 out.suburban.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis', 'New folder', paste('out-suburban-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-suburban-',i,'.RDa', sep= "")))
   out.suburban.t  <-  rbind(out.suburban.t, loc.suburban) %>% 
     filter(!is.na(Outcome))
   }
 
 out.rural.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis', 'New folder', paste('out-rural-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-rural-',i,'.RDa', sep= "")))
   out.rural.t  <-  rbind(out.rural.t, loc.rural) %>% 
     filter(!is.na(Outcome))
   }
@@ -289,21 +362,21 @@ rm(out.urban.t, out.suburban.t, out.rural.t, out.urbanicity.t,
 ```{r Output SES Urban}
 out.sesL.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis', 'New folder', paste('out-sesL-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-sesL-',i,'.RDa', sep= "")))
   out.sesL.t  <-  rbind(out.sesL.t, ses.Low) %>% 
     filter(!is.na(Outcome))
   }
 
 out.sesM.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis', 'New folder', paste('out-sesM-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-sesM-',i,'.RDa', sep= "")))
   out.sesM.t  <-  rbind(out.sesM.t, ses.Mid) %>% 
     filter(!is.na(Outcome))
   }
 
 out.sesH.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder',paste('out-sesH-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-sesH-',i,'.RDa', sep= "")))
   out.sesH.t  <-  rbind(out.sesH.t, ses.High) %>% 
     filter(!is.na(Outcome))
   }
@@ -335,7 +408,7 @@ rm(out.sesL.t, out.sesM.t, out.sesH.t, out.sesUrban.t,
 ```{r Output Region}
 out.W.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder',paste('out-west-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-west-',i,'.RDa', sep= "")))
   out.W.t  <-  rbind(out.W.t, region.W) %>% 
     filter(!is.na(Outcome))
   }
@@ -349,14 +422,14 @@ for (i in 1:4){
 
 out.S.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder',paste('out-south-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-south-',i,'.RDa', sep= "")))
   out.S.t  <-  rbind(out.S.t, region.S) %>% 
     filter(!is.na(Outcome))
   }
 
 out.NE.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder', paste('out-northeast-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-northeast-',i,'.RDa', sep= "")))
   out.NE.t  <-  rbind(out.NE.t, region.NE) %>% 
     filter(!is.na(Outcome))
   }
@@ -387,7 +460,7 @@ rm(out.W.t, out.MW.t, out.S.t, out.NE.t, out.region.t,
 ```{r Output Bufferzone}
 out.bz6.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder',paste('out-pm-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-pm-',i,'.RDa', sep= "")))
   out.bz6.t  <-  rbind(out.bz6.t, out.pm) %>% drop_na()
   }
 out.bz6.t <- out.bz6.t %>% 
@@ -395,7 +468,7 @@ out.bz6.t <- out.bz6.t %>%
 
 out.bz12.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder',paste('out-pm-bz12-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-pm-bz12-',i,'.RDa', sep= "")))
   out.bz12.t  <-  rbind(out.bz12.t, out.pm.bz12) %>% drop_na()
   }
 out.bz12.t <- out.bz12.t %>% 
@@ -403,7 +476,7 @@ out.bz12.t <- out.bz12.t %>%
 
 out.bz24.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder',paste('out-pm-bz24-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-pm-bz24-',i,'.RDa', sep= "")))
   out.bz24.t  <-  rbind(out.bz24.t, out.pm.bz24) %>% drop_na()
   }
 out.bz24.t <- out.bz24.t %>% 
@@ -434,7 +507,7 @@ rm(out.bz6.t, out.bz12.t, out.bz24.t, out.buffer.t,
 ```{r Output Exposure Measure}
 out.ses.maxh.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder',paste('out-ses-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-ses-',i,'.RDa', sep= "")))
   out.ses.maxh.t  <-  rbind(out.ses.maxh.t, out.ses) %>% drop_na()
 }
 out.ses.maxh.t <- out.ses.maxh.t %>% 
@@ -442,7 +515,7 @@ out.ses.maxh.t <- out.ses.maxh.t %>%
 
 out.ses.8hmax.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder',paste('out-ses-8hmax-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-ses-8hmax-',i,'.RDa', sep= "")))
   out.ses.8hmax.t  <-  rbind(out.ses.8hmax.t, out.ses.8h) %>% drop_na()
 }
 out.ses.8hmax.t <- out.ses.8hmax.t %>% 
@@ -450,7 +523,7 @@ out.ses.8hmax.t <- out.ses.8hmax.t %>%
 
 out.ses.avgh.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder',paste('out-ses-avgh-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-ses-avgh-',i,'.RDa', sep= "")))
   out.ses.avgh.t  <-  rbind(out.ses.avgh.t, out.ses.h) %>% drop_na()
 }
 out.ses.avgh.t <- out.ses.avgh.t %>% 
@@ -480,7 +553,7 @@ rm(out.ses.maxh.t, out.ses.8hmax.t, out.ses.avgh.t, out.ses.exp.t,
 ```{r Output Exposure Measure}
 out.pm.maxh.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder',paste('out-pm-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-pm-',i,'.RDa', sep= "")))
   out.pm.maxh.t  <-  rbind(out.pm.maxh.t, out.pm) %>% drop_na()
 }
 out.pm.maxh.t <- out.pm.maxh.t %>% 
@@ -488,7 +561,7 @@ out.pm.maxh.t <- out.pm.maxh.t %>%
 
 out.pm.8hmax.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder',paste('out-pm-8hmax-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-pm-8hmax-',i,'.RDa', sep= "")))
   out.pm.8hmax.t  <-  rbind(out.pm.8hmax.t, out.pm.8h) %>% drop_na()
 }
 out.pm.8hmax.t <- out.pm.8hmax.t %>% 
@@ -496,7 +569,7 @@ out.pm.8hmax.t <- out.pm.8hmax.t %>%
 
 out.pm.avgh.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder',paste('out-pm-avgh-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-pm-avgh-',i,'.RDa', sep= "")))
   out.pm.avgh.t  <-  rbind(out.pm.avgh.t, out.pm.h) %>% drop_na()
 }
 out.pm.avgh.t <- out.pm.avgh.t %>% 
@@ -537,7 +610,7 @@ save(out.exposure, file = here('output','analysis','out-exposure.RDa'))
 ```{r Output BRFSS}
 out.brfss0.t = data.frame()
 for (i in 1:4){
-  load(here('output','analysis','New folder',paste('out-pm-brfss0-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-pm-brfss0-',i,'.RDa', sep= "")))
   out.brfss0.t  <-  rbind(out.brfss0.t, out.pm.brfss0) %>% drop_na()
 }
 
@@ -546,7 +619,7 @@ out.brfss0.t <- out.brfss0.t %>%
 
 out.brfss.t = data.frame()
 for (i in 1:7){
-  load(here('output','analysis','New folder',paste('out-pm-brfss-',i,'.RDa', sep= "")))
+  load(here('output','analysis','out',paste('out-pm-brfss-',i,'.RDa', sep= "")))
   out.brfss.t  <-  rbind(out.brfss.t, out.pm.brfss) %>% drop_na()
 }
 

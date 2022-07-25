@@ -19,6 +19,26 @@ library(RColorBrewer)
 
 
 # Single Group Plot Function - Comp ----------------------------------------------
+Plot.Single <- function(dt, ggtheme){
+  p <- ggplot(data = dt %>% 
+           mutate(sig = ifelse(HR.U < 1 , 16, #16-prtc
+                               ifelse((HR.L<=1 & HR.U>=1), 1, 16))) ,
+         aes(x = HR, xmin = HR.L, xmax = HR.U, y = Cause)) +
+    geom_vline(xintercept = 1, linetype = 2, color = "black") +
+    labs(x = "", y = "") +
+    geom_errorbar(aes(xmin = HR.L, xmax = HR.U), color = plot.cols,
+                  width = 0.2, cex = 1, alpha = 0.75) +
+    geom_point(aes(x = HR, y = Cause, shape = sig), 
+               size = 4, color = plot.cols, show.legend = F) + 
+    scale_color_manual(values = plot.cols) +
+    scale_shape_identity() +
+    scale_x_continuous(breaks=c(1, 1.05, 1.1, 1.15, 1.2, 1.25))  +
+    scale_y_discrete(limits=rev) +
+    ggtheme
+  return(p)
+}
+
+
 Plot.Single.lab <- function(dt, ggtheme){
   p <- ggplot(dt, aes(x = HR, xmin = HR.L, xmax = HR.U, y = Index)) +
     geom_vline(xintercept = 1, linetype = 2, color = "black") +

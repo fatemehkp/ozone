@@ -18,8 +18,9 @@ ggtheme.single <- theme_bw() +
         axis.ticks.y = element_blank(),
         legend.title = element_blank(),
         legend.text = element_text(size = 14, color = 'black', 
-                                   face = 'bold')
-  )
+                                   face = 'bold'),
+        legend.position = 'bottom')
+
 
 ggtheme.single <- theme_bw() + 
   theme(axis.text.x = element_text(size = 12, color = 'black'),
@@ -188,27 +189,6 @@ ggplot(data = out.sesUrban %>%
 
 ggsave(here('output','plot','sesUrban.jpeg'), width = 9, height = 12, dpi = 600)
 
-plot.cols <- c("#FF8200", "#075AAA", "#EB2226", "#01742F")
-ggplot(data = out.region %>% 
-         mutate(sig = ifelse(HR.U < 1 , 16, #16-prtc
-                             ifelse((HR.L<=1 & HR.U>=1), 1, 16))) %>% 
-         filter(Cause %in% cuz),
-       aes(x = HR, xmin = HR.L, xmax = HR.U, y = Value)) +
-  geom_vline(xintercept = 1, linetype = 2, color = "black") +
-  labs(x = "", y = "") +
-  geom_errorbar(aes(xmin = HR.L, xmax = HR.U, color = Value), 
-                width = 0.2, cex = 1, alpha = 0.75) + 
-  geom_point(aes(x = HR, y = Value, color = Value, shape = sig), 
-             size = 3, show.legend = T) + 
-  scale_color_manual(values = plot.cols) +
-  scale_shape_identity() +
-  scale_x_continuous(breaks=c(1, 1.1, 1.2, 1.3, 1.4, 1.5))  +
-  facet_grid(Cause ~ Subgroup, switch='y', scales='free', shrink=TRUE, space='free') +
-  ggtheme.single +
-  guides(color = guide_legend(ncol = 1, byrow = T, reverse = T,
-                              direction = "vertical"))
-
-ggsave(here('output','plot','region.jpeg'), width = 9, height = 12, dpi = 600)
 
 
 
@@ -310,6 +290,54 @@ ggsave(here('output','plot','exposure.jpeg'), width = 10, height = 12, dpi = 600
 
 
 
+
+# Main --------------------------------------------------------------------
+
+ggtheme.single <- theme_bw() + 
+  theme(panel.spacing.y = unit(c(0.25, 0, 0, 0, 0.25, 0, 0, 0.25, 0, 0.25, 0.25, 0),'lines'),
+        panel.spacing.x = unit(0.25,'lines'),
+        panel.border = element_rect(fill = NA, 'lines', color = "gray25"),
+        strip.text.x = element_text(size = 16, color = 'black', 
+                                    face = 'bold'),
+        strip.text.y.left = element_text(size = 16, color = 'black', 
+                                         face = 'bold', angle = 0, hjust = 0),
+        strip.background = element_rect(fill = "#B9CFED"),
+        axis.text.x = element_text(size = 14, color = 'black'),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 16, color = 'black', 
+                                   face = 'bold'),
+        legend.position = "bottom"
+  )
+
+
+plot.cols <- c("#FF8200", "#075AAA", "#EB2226", "#01742F")
+ggplot(data = out.region %>% 
+         mutate(sig = ifelse(HR.U < 1 , 16, #16-prtc
+                             ifelse((HR.L<=1 & HR.U>=1), 1, 16))) %>% 
+         filter(Cause %in% cuz),
+       aes(x = HR, xmin = HR.L, xmax = HR.U, y = Value)) +
+  geom_vline(xintercept = 1, linetype = 2, color = "black") +
+  labs(x = "", y = "") +
+  geom_errorbar(aes(xmin = HR.L, xmax = HR.U, color = Value), 
+                width = 0.25, cex = 1, alpha = 0.75) + 
+  geom_point(aes(x = HR, y = Value, color = Value, shape = sig), 
+             size = 3, show.legend = T) + 
+  scale_color_manual(values = plot.cols) +
+  scale_shape_identity() +
+  scale_x_continuous(breaks=c(1, 1.1, 1.2, 1.3, 1.4, 1.5))  +
+  facet_grid(Cause ~ Subgroup, switch='y', scales='free', shrink=TRUE, space='free') +
+  ggtheme.single +
+  theme(legend.position = "right") +
+  guides(color = guide_legend(ncol = 1, byrow = T, reverse = T,
+                              direction = "vertical"))
+
+ggsave(here('output','plot','region.jpeg'), width = 9, height = 12, dpi = 600)
+
+
+
+
 plot.cols <- c("#EB2226", "#075AAA")
 ggplot(data = out.brfss %>% 
          mutate(sig = ifelse(HR.U < 1 , 16, #16-prtc
@@ -319,9 +347,9 @@ ggplot(data = out.brfss %>%
   geom_vline(xintercept = 1, linetype = 2, color = "black") +
   labs(x = "", y = "") +
   geom_errorbar(aes(xmin = HR.L, xmax = HR.U, color = Value), 
-                width = 0.2, cex = 1, alpha = 0.75) +
+                width = 0.2, cex = 1.25, alpha = 0.75) +
   geom_point(aes(x = HR, y = Value, color = Value, shape = sig), 
-             size = 3, show.legend = T) + 
+             size = 4, show.legend = T) + 
   scale_color_manual(values = plot.cols) +
   scale_shape_identity() +
   scale_x_continuous(breaks=c(1, 1.05, 1.1, 1.15, 1.2, 1.25))  +
@@ -330,55 +358,65 @@ ggplot(data = out.brfss %>%
   guides(color = guide_legend(ncol = 1, byrow = T, reverse = T,
                               direction = "vertical"))
 
-ggsave(here('output','plot','brfss.jpeg'), width = 9, height = 12, dpi = 600)
+ggsave(here('output','plot','brfss.jpeg'), width = 6, height = 12, dpi = 600)
 
 
+#c(" >  75 | Male ","<= 75 | Female")
 
+plot.cols <- c("#FF8200", "#075AAA", "#EB2226", "#01742F")
+plot.labs <- c("                           | White", " >  75 | Male      | Hispanic","65-75 | Female  | Black", "                           | Asian") 
 
-ggtheme.single <- theme_bw() + 
-  theme(panel.spacing.y = unit(c(0.25, 0, 0, 0, 0.25, 0, 0, 0.25, 0, 0.25, 0.25, 0),'lines'),
-        panel.spacing.x = unit(0.25,'lines'),
-        panel.border = element_rect(fill = NA, 'lines', color = "gray25"),
-        strip.text.x = element_text(size = 14, color = 'black', 
-                                         face = 'bold'),
-        strip.text.y.left = element_text(size = 14, color = 'black', 
-                                         face = 'bold', angle = 0, hjust = 0),
-        strip.background = element_rect(fill = "#B9CFED"),
-        axis.text.x = element_text(size = 12, color = 'black'),
-        axis.text.y = element_blank(),
-        axis.ticks.y = element_blank(),
-        legend.title = element_blank(),
-        legend.text = element_text(size = 14, color = 'black', 
-                                   face = 'bold'),
-        legend.position = "bottom"
-  )
-
-plot.cols <- c("#EB2226", "#075AAA")
-plot.labs <- c(" >  75 | Male ","<= 75 | Female")
-
-#labels = c("                          | White", " >  75 | Male      | Hispanic","<= 75 | Female  | Black", "                          | Asian"), 
-
-ggplot(data = out.age %>% 
-         add_row(out.sex) %>% 
+ggplot(data = out.demo %>% 
          mutate(sig = ifelse(HR.U < 1 , 16, #16-prtc
-                             ifelse((HR.L<=1 & HR.U>=1), 1, 16)),
-                Value.comb = case_when(Value %in% c("Male", ">75") ~ "a",
-                                       T ~ "b")) %>% 
+                             ifelse((HR.L<=1 & HR.U>=1), 1, 16))) %>% 
          filter(Cause %in% cuz),
-       aes(x = HR, xmin = HR.L, xmax = HR.U, y = Value.comb)) +
+       aes(x = HR, xmin = HR.L, xmax = HR.U, y = tag)) +
   geom_vline(xintercept = 1, linetype = 2, color = "black") +
   labs(x = "", y = "") +
-  geom_errorbar(aes(xmin = HR.L, xmax = HR.U, color = Value.comb), 
-                width = 0.2, cex = 1, alpha = 0.75) +
-  geom_point(aes(x = HR, y = Value.comb, color = Value.comb, shape = sig), 
-             size = 3, show.legend = T) + 
+  geom_errorbar(aes(xmin = HR.L, xmax = HR.U, color = tag), 
+                width = 0.4, cex = 1.25, alpha = 0.75) +
+  geom_point(aes(x = HR, y = tag, color = tag, shape = sig), 
+             size = 4, show.legend = T) + 
   scale_color_manual(labels = plot.labs,
                      values = plot.cols) +
   scale_shape_identity() +
-  scale_x_continuous(breaks=c(1, 1.05, 1.1, 1.15, 1.2, 1.25))  +
+  scale_x_continuous(breaks=c(1, 1.1, 1.2, 1.3))  +
   facet_grid(Cause ~ Subgroup, switch='y', scales='free', shrink=TRUE, space='free') +
   ggtheme.single +
   guides(color = guide_legend(ncol = 1, byrow = T, reverse = T,
                               direction = "vertical"))
 
-ggsave(here('output','plot','age-sex.jpeg'), width = 9, height = 12, dpi = 600)
+ggsave(here('output','plot','age-sex-race.jpeg'), width = 9, height = 12, dpi = 600)
+
+
+
+plot.cols <- c("#01742F", "#075AAA", "#EB2226")
+plot.labs <- c("Rural         | High", "Suburban  | Mid","Urban        | Low") 
+
+ggplot(data = out.urbanicity %>% 
+         select(Cause:HR.U) %>% 
+         add_row(out.sesUrban %>% select(Cause:HR.U)) %>% 
+         mutate(sig = ifelse(HR.U < 1 , 16, #16-prtc
+                             ifelse((HR.L<=1 & HR.U>=1), 1, 16)),
+                Value.comb = case_when(Value %in% c("High", "Rural") ~ "a",
+                                       Value %in% c("Middle", "Suburban") ~"b",
+                                       T ~ "c"),
+                Subgroup = factor(Subgroup, levels = c("Urbanicity", "Income Urban"))) %>% 
+         filter(Cause %in% cuz),
+       aes(x = HR, xmin = HR.L, xmax = HR.U, y = Value.comb)) +
+  geom_vline(xintercept = 1, linetype = 2, color = "black") +
+  labs(x = "", y = "") +
+  geom_errorbar(aes(xmin = HR.L, xmax = HR.U, color = Value.comb), 
+                width = 0.4, cex = 1.25, alpha = 0.75) +
+  geom_point(aes(x = HR, y = Value.comb, color = Value.comb, shape = sig), 
+             size = 4, show.legend = T) + 
+  scale_color_manual(labels = plot.labs,
+                     values = plot.cols) +
+  scale_shape_identity() +
+  scale_x_continuous(breaks=c(1, 1.1, 1.2, 1.3, 1.4))  +
+  facet_grid(Cause ~ Subgroup, switch='y', scales='free', shrink=TRUE, space='free') +
+  ggtheme.single +
+  guides(color = guide_legend(ncol = 1, byrow = T, reverse = T,
+                              direction = "vertical"))
+
+ggsave(here('output','plot','urb-incom.jpeg'), width = 9, height = 12, dpi = 600)

@@ -199,7 +199,6 @@ save(dt.ndi.ozone.age,
      file = here('data', 'analysis', 'ndi-ozone-age.RDa'))
 ```
 
-
 ```{r ozone race}
 dt.ndi.ozone.race <- dt.master.ndi.ozone.race %>% 
   mutate(StrID = paste(age, sex, race)) %>% 
@@ -216,8 +215,6 @@ save(dt.ndi.ozone.race,
      file = here('data', 'analysis', 'ndi-ozone-race.RDa')) 
 
 ```
-
-
 
 ```{r r ozone urban SES Categories}
 dt.site.urban <- dt.site %>% 

@@ -7,8 +7,6 @@ output:
     df_print: paged
 ---
 
-#### To Do:
-#      Merge it with CMS
 ###############################################################################
 
 ### This program:
@@ -51,7 +49,7 @@ load(paste0(dirPMC,'aqs-sites.RDa'))
 ```
 
 ```{r EPA AQS Data Download - hourly data}
-#Using EPA.AQS.download Function
+#Using EPA.AQS.download.h Function
 dt.ozone.h.raw <- EPA.AQS.download.h (period = "hourly", Index = c(44201),
                         start = 2000, end = 2008)
 save(dt.ozone.h.raw, file = here('data', 'raw', 'ozone-hour-raw.RDa'))
@@ -62,7 +60,7 @@ site.ozone <- dt.ozone.h.raw %>% distinct(Site.ID)#1632
 ```
 
 ```{r EPA AQS Data Download - 8hour data}
-#Using EPA.AQS.download Function
+#Using EPA.AQS.download.8h Function
 dt.ozone.8h.raw <- EPA.AQS.download.8h (period = "8hour", Index = c(44201),
                         start = 2000, end = 2008)
 save(dt.ozone.8h.raw, file = here('data', 'raw', 'ozone-8hour-raw.RDa'))
@@ -73,7 +71,7 @@ site.ozone <- dt.ozone.8h.raw %>% distinct(Site.ID) #1633
 ```
 
 ```{r Air quality data Process}
-# Find sites with at least 18hour, 4day, 9month and 4year
+# Find sites with at least 18hours, 21days, 5 warm month and 4years
 # Using Air.Hourly.Process function
 dt.ozone.h.sel <- Air.Hourly.Process(dt = dt.ozone.h.raw, m1 = 4, m2 = 9,
                                   h = 18, d = 21, m = 5, y = 4)
@@ -157,8 +155,7 @@ summary(check$n)
 ```{r Zipcodes in x-mile bufferzone of Monitoring Sites}
 # remove o3 measures for now to make the dataset smaller
 dt.ozone <- dt.ozone.warm %>% 
-  select(Site.ID, Year) %>% 
-  mutate(psuedo = 100)
+  select(Site.ID, Year)
 
 # joining zipcodes to monitoring sites
 dt.ozone <- dt.ozone %>% 
@@ -175,7 +172,7 @@ dt.site.dist.shorter <- dt.ozone %>%
 # 6-mile bufferzone around monitoring site
 dt.ozone.site.zip.bz6 <- dt.site.dist.shorter %>% 
   filter(Dist <= 6) %>% 
-  select(Zip.Code, Year, Site.ID, psuedo)
+  select(Zip.Code, Year, Site.ID)
 
 save(dt.ozone.site.zip.bz6, 
      file = here('data', 'processed', 'ozone-site-zip-bz6.RDa'))
@@ -218,7 +215,6 @@ dt.ozone.site.ndi %>%
 # remove o3 measures for now to make the dataset smaller
 dt.ozone <- dt.ozone.warm %>% 
   select(Site.ID, Year) %>% 
-  mutate(psuedo = 100) %>% 
   inner_join(dt.ozone.site.ndi)
 
 # joining zipcodes to monitoring sites
@@ -236,7 +232,7 @@ dt.site.dist.shorter <- dt.ozone %>%
 # 12-mile bufferzone around monitoring site
 dt.ozone.site.zip.bz12 <- dt.site.dist.shorter %>% 
   filter(Dist <= 12) %>% 
-  select(Zip.Code, Year, Site.ID, psuedo)
+  select(Zip.Code, Year, Site.ID)
 
 save(dt.ozone.site.zip.bz12, 
      file = here('data', 'processed', 'ozone-site-zip-bz12.RDa'))
@@ -251,7 +247,7 @@ dt.ozone.site.zip.bz12 %>% distinct(Site.ID) %>% nrow() #1258 > 1221
 # 24-mile bufferzone around monitoring site
 dt.ozone.site.zip.bz24 <- dt.site.dist.shorter %>% 
   filter(Dist <= 24) %>% 
-  select(Zip.Code, Year, Site.ID, psuedo)
+  select(Zip.Code, Year, Site.ID)
 
 save(dt.ozone.site.zip.bz24, 
      file = here('data', 'processed', 'ozone-site-zip-bz24.RDa'))
@@ -263,7 +259,6 @@ write.csv(dt.ozone.site.zip.bz24,
 dt.ozone.site.zip.bz24 %>% distinct(Zip.Code) %>% nrow() #28,029 > 27794
 dt.ozone.site.zip.bz24 %>% distinct(Site.ID) %>% nrow() #1268 > 1221
 ```
-
 
 ```{r - Adding yearly pm and no2 data to warm season ozone data}
 # all zipcodes in 6-mile bufferzone of each site each year
@@ -357,4 +352,3 @@ dt.no2.ozone.bz24 <- read.csv(
 save(dt.no2.ozone.bz24, 
      file = here('data', 'processed', 'no2-ozone-bz24.RDa'))
 ```
-

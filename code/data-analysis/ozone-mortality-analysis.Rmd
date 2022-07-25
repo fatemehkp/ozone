@@ -81,6 +81,11 @@ load(here('data','analysis','ndi-ozone.RDa'))
 load(here('data','analysis','ndi-ozone-no2.RDa'))
 load(here('data','analysis','ndi-ozone-age.RDa'))
 load(here('data','analysis','ndi-ozone-race.RDa'))
+load(here('data','analysis','ndi-ozone-urban-sescat.RDa'))
+load(here('data','analysis','ndi-ozone-urbsub-sescat.RDa'))
+load(here('data','analysis','ndi-ozone-bz12.RDa'))
+load(here('data','analysis','ndi-ozone-bz24.RDa'))
+load(here('data','analysis','ndi-ozone-brfss.RDa'))
 ```
 
 ```{r }
@@ -144,8 +149,8 @@ for (Y in cuz4){
   out[1,3] <- summary(glm_model)$coefficients['O3maxh', 2]
   out.base <- rbind(out.base, out) 
 }
-save(out.base, 
-     file = here('output', 'analysis', 'out-base-4.RDa'))
+
+save(out.base, file = here('output', 'analysis', 'out-base-4.RDa'))
 ```
 
 ```{r state}
@@ -164,8 +169,8 @@ for (Y in cuz4){
   out[1,3] <- summary(glm_model)$coefficients['O3maxh', 2]
   out.state <- rbind(out.state, out) 
 }
-save(out.state, 
-     file = here('output', 'analysis', 'out-state-4.RDa'))
+
+save(out.state, file = here('output', 'analysis', 'out-state-4.RDa'))
 ```
 
 ```{r state + ses}
@@ -184,8 +189,8 @@ for (Y in cuz4){
   out[1,3] <- summary(glm_model)$coefficients['O3maxh', 2]
   out.ses <- rbind(out.ses, out) 
 }
-save(out.ses, 
-     file = here('output', 'analysis', 'out-ses-4.RDa'))
+
+save(out.ses, file = here('output', 'analysis', 'out-ses-4.RDa'))
 ```
 
 ```{r state + ses + pm}
@@ -209,8 +214,7 @@ for (Y in cuz4){
   out.pm <- rbind(out.pm, out) 
 }
 
-save(out.pm, 
-     file = here('output', 'analysis', 'out-pm-4.RDa'))
+save(out.pm, file = here('output', 'analysis', 'out-pm-4.RDa'))
 ```
 
 ```{r state + ses + no2}
@@ -233,8 +237,8 @@ for (Y in cuz4){
   out[1,5] <- summary(glm_model)$coefficients['NO2',2] 
   out.no2 <- rbind(out.no2, out) 
 }
-save(out.no2, 
-     file = here('output', 'analysis', 'out-no2-4.RDa'))
+
+save(out.no2, file = here('output', 'analysis', 'out-no2-4.RDa'))
 ```
 
 ```{r state + ses + pm - age}
@@ -261,8 +265,7 @@ for (Y in cuz4){
   age.le <- rbind(age.le, out)
 }
 
-save(age.le, 
-     file = here('output', 'analysis', 'out-le-4.RDa'))
+save(age.le, file = here('output', 'analysis', 'out-le-4.RDa'))
 
 ### Age M75
 dt.ndi.ozone.age$age <- relevel(dt.ndi.ozone.age$age, ref = "M75") 
@@ -285,12 +288,10 @@ for (Y in cuz4){
   age.mt <- rbind(age.mt, out)
 }
 
-save(age.mt, 
-     file = here('output', 'analysis', 'out-mt-4.RDa'))
+save(age.mt, file = here('output', 'analysis', 'out-mt-4.RDa'))
 
 out.age <-na.omit(rbind(age.le, age.mt))
-save(out.age, 
-     file = here('output', 'analysis', 'out-age.RDa'))
+save(out.age, file = here('output', 'analysis', 'out-age.RDa'))
 ```
 
 ```{r state + ses + pm - sex}
@@ -317,8 +318,7 @@ for (Y in cuz4){
   sex.F <- rbind(sex.F, out)
 }
 
-save(sex.F, 
-     file = here('output', 'analysis', 'out-sexF-4.RDa'))
+save(sex.F, file = here('output', 'analysis', 'out-sexF-4.RDa'))
 
 ### sex Male
 dt.ndi.ozone$sex <- relevel(dt.ndi.ozone$sex, ref = "M") 
@@ -341,12 +341,10 @@ for (Y in cuz4){
   sex.M <- rbind(sex.M, out)
 }
 
-save(sex.M, 
-     file = here('output', 'analysis', 'out-sexM-4.RDa'))
+save(sex.M, file = here('output', 'analysis', 'out-sexM-4.RDa'))
 
 out.sex <-na.omit(rbind(sex.F, sex.M))
-save(out.sex, 
-     file = here('output', 'analysis', 'out-sex.RDa'))
+save(out.sex, file = here('output', 'analysis', 'out-sex.RDa'))
 ```
 
 ```{r state + ses + pm - race}
@@ -378,8 +376,7 @@ for (Y in cuz1){
   race.A <- rbind(race.A, out)
 }
 
-save(race.A, 
-     file = here('output', 'analysis', 'out-raceA-1.RDa'))
+save(race.A, file = here('output', 'analysis', 'out-raceA-1.RDa'))
 
 ### race Black
 dt.ndi.ozone.race <- dt.ndi.ozone.race %>% 
@@ -409,8 +406,7 @@ for (Y in cuz1){
   race.B <- rbind(race.B, out)
 }
 
-save(race.B, 
-     file = here('output', 'analysis', 'out-raceB-1.RDa'))
+save(race.B, file = here('output', 'analysis', 'out-raceB-1.RDa'))
 
 ### race Hispanic
 dt.ndi.ozone.race <- dt.ndi.ozone.race %>% 
@@ -440,8 +436,7 @@ for (Y in cuz1){
   race.H <- rbind(race.H, out)
 }
 
-save(race.H, 
-     file = here('output', 'analysis', 'out-raceH-1.RDa'))
+save(race.H, file = here('output', 'analysis', 'out-raceH-1.RDa'))
 
 ### race White
 dt.ndi.ozone.race <- dt.ndi.ozone.race %>% 
@@ -471,8 +466,7 @@ for (Y in cuz1){
   race.W <- rbind(race.W, out)
 }
 
-save(race.W, 
-     file = here('output', 'analysis', 'out-raceW-1.RDa'))
+save(race.W, file = here('output', 'analysis', 'out-raceW-1.RDa'))
 ```
 
 
@@ -504,9 +498,7 @@ for (Y in cuz4){
   loc.urban <- rbind(loc.urban, out)
 }
 
-save(loc.urban, 
-     file = here('output', 'analysis', 'out-urban-4.RDa'))
-
+save(loc.urban, file = here('output', 'analysis', 'out-urban-4.RDa'))
 
 ### Suburban
 dt.ndi.ozone$LocSet <- relevel(dt.ndi.ozone$LocSet, ref = "suburban") 
@@ -530,8 +522,7 @@ for (Y in cuz4){
   loc.suburban <- rbind(loc.suburban, out)
 }
 
-save(loc.suburban, 
-     file = here('output', 'analysis', 'out-suburban-4.RDa'))
+save(loc.suburban, file = here('output', 'analysis', 'out-suburban-4.RDa'))
 
 ### Rural
 dt.ndi.ozone$LocSet <- relevel(dt.ndi.ozone$LocSet, ref = "rural") 
@@ -555,8 +546,7 @@ for (Y in cuz4){
   loc.rural <- rbind(loc.rural, out)
 }
 
-save(loc.rural, 
-     file = here('output', 'analysis', 'out-rural-4.RDa'))
+save(loc.rural, file = here('output', 'analysis', 'out-rural-4.RDa'))
 ```
 
 ```{r state + ses + pm - urban SES cat}
@@ -585,8 +575,7 @@ for (Y in cuz4){
   ses.Low <- rbind(ses.Low, out)
 }
 
-save(ses.Low, 
-     file = here('output', 'analysis', 'out-sesL-4.RDa'))
+save(ses.Low, file = here('output', 'analysis', 'out-sesL-4.RDa'))
 
 
 ### Middle SES
@@ -612,8 +601,7 @@ for (Y in cuz4){
   ses.Mid <- rbind(ses.Mid, out)
 }
 
-save(ses.Mid, 
-     file = here('output', 'analysis', 'out-sesM-4.RDa'))
+save(ses.Mid, file = here('output', 'analysis', 'out-sesM-4.RDa'))
 
 ### High SES
 dt.ndi.ozone.urban.sescat$sescat <- relevel(dt.ndi.ozone.urban.sescat$sescat,
@@ -638,8 +626,7 @@ for (Y in cuz4){
   ses.High <- rbind(ses.High, out)
 }
 
-save(ses.High, 
-     file = here('output', 'analysis', 'out-sesH-4.RDa'))
+save(ses.High, file = here('output', 'analysis', 'out-sesH-4.RDa'))
 ```
 
 ```{r state + ses + pm - urban and suburban SES cat}
@@ -668,8 +655,7 @@ for (Y in cuz4){
   ses.Low <- rbind(ses.Low, out)
 }
 
-save(ses.Low, 
-     file = here('output', 'analysis', 'out-sesL-II-4.RDa'))
+save(ses.Low, file = here('output', 'analysis', 'out-sesL-II-4.RDa'))
 
 
 ### Middle SES
@@ -695,8 +681,7 @@ for (Y in cuz4){
   ses.Mid <- rbind(ses.Mid, out)
 }
 
-save(ses.Mid, 
-     file = here('output', 'analysis', 'out-sesM-II-4.RDa'))
+save(ses.Mid, file = here('output', 'analysis', 'out-sesM-II-4.RDa'))
 
 ### High SES
 dt.ndi.ozone.urbsub.sescat$sescat <- relevel(dt.ndi.ozone.urbsub.sescat$sescat,
@@ -721,8 +706,7 @@ for (Y in cuz4){
   ses.High <- rbind(ses.High, out)
 }
 
-save(ses.High, 
-     file = here('output', 'analysis', 'out-sesH-II-4.RDa'))
+save(ses.High, file = here('output', 'analysis', 'out-sesH-II-4.RDa'))
 ```
 
 ```{r state + ses + pm - region}
@@ -755,8 +739,7 @@ for (Y in cuz4){
   region.W <- rbind(region.W, out)
 }
 
-save(region.W, 
-     file = here('output', 'analysis', 'out-west-4.RDa'))
+save(region.W, file = here('output', 'analysis', 'out-west-4.RDa'))
 
 ### Midwest
 dt.ndi.ozone$region <- relevel(dt.ndi.ozone$region, ref = "MW") 
@@ -781,8 +764,7 @@ for (Y in cuz4){
   region.MW <- rbind(region.MW, out)
 }
 
-save(region.MW, 
-     file = here('output', 'analysis', 'out-midwest-4.RDa'))
+save(region.MW, file = here('output', 'analysis', 'out-midwest-4.RDa'))
 
 ### South
 dt.ndi.ozone$region <- relevel(dt.ndi.ozone$region, ref = "S") 
@@ -807,8 +789,7 @@ for (Y in cuz4){
   region.S <- rbind(region.S, out)
 }
 
-save(region.S, 
-     file = here('output', 'analysis', 'out-south-4.RDa'))
+save(region.S, file = here('output', 'analysis', 'out-south-4.RDa'))
 
 ### Northeast
 dt.ndi.ozone$region <- relevel(dt.ndi.ozone$region, ref = "NE") 
@@ -833,12 +814,7 @@ for (Y in cuz4){
   region.NE <- rbind(region.NE, out)
 }
 
-save(region.NE, 
-     file = here('output', 'analysis', 'out-northeast-4.RDa'))
-
-#out.race <-na.omit(rbind(race.A, race.B, race.H, race.N, race.W))
-#save(out.race, 
-#     file = here('output', 'analysis', 'out-race.RDa'))
+save(region.NE, file = here('output', 'analysis', 'out-northeast-4.RDa'))
 ```
 
 ```{r state + ses + pm - bz12}
@@ -862,8 +838,7 @@ for (Y in cuz4){
   out.pm.bz12 <- rbind(out.pm.bz12, out) 
 }
 
-save(out.pm.bz12, 
-     file = here('output', 'analysis', 'out-pm-bz12-4.RDa'))
+save(out.pm.bz12, file = here('output', 'analysis', 'out-pm-bz12-4.RDa'))
 ```
 
 ```{r state + ses + pm - bz24}
@@ -887,8 +862,7 @@ for (Y in cuz4){
   out.pm.bz24 <- rbind(out.pm.bz24, out) 
 }
 
-save(out.pm.bz24, 
-     file = here('output', 'analysis', 'out-pm-bz24-4.RDa'))
+save(out.pm.bz24, file = here('output', 'analysis', 'out-pm-bz24-4.RDa'))
 ```
 
 ```{r state + ses - max8h}
@@ -907,8 +881,7 @@ for (Y in cuz4){
   out[1,3] <- summary(glm_model)$coefficients['O3max8h', 2]
   out.ses.8h <- rbind(out.ses.8h, out) 
 }
-save(out.ses.8h, 
-     file = here('output', 'analysis', 'out-ses-8hmax-4.RDa'))
+save(out.ses.8h, file = here('output', 'analysis', 'out-ses-8hmax-4.RDa'))
 ```
 
 ```{r state + ses - avgh}
@@ -927,8 +900,7 @@ for (Y in cuz4){
   out[1,3] <- summary(glm_model)$coefficients['O3avgh', 2]
   out.ses.h <- rbind(out.ses.h, out) 
 }
-save(out.ses.h, 
-     file = here('output', 'analysis', 'out-ses-avgh-4.RDa'))
+save(out.ses.h, file = here('output', 'analysis', 'out-ses-avgh-4.RDa'))
 ```
 
 ```{r state + ses + pm - max8h}
@@ -952,8 +924,7 @@ for (Y in cuz4){
   out.pm.8h <- rbind(out.pm.8h, out) 
 }
 
-save(out.pm.8h, 
-     file = here('output', 'analysis', 'out-pm-8hmax-4.RDa'))
+save(out.pm.8h, file = here('output', 'analysis', 'out-pm-8hmax-4.RDa'))
 ```
 
 ```{r state + ses + pm - avgh}
@@ -977,8 +948,7 @@ for (Y in cuz4){
   out.pm.h <- rbind(out.pm.h, out) 
 }
 
-save(out.pm.h, 
-     file = here('output', 'analysis', 'out-pm-avgh-4.RDa'))
+save(out.pm.h, file = here('output', 'analysis', 'out-pm-avgh-4.RDa'))
 ```
 
 ```{r pm - brfss0}
@@ -1002,8 +972,7 @@ for (Y in cuz4){
   out.pm.brfss0 <- rbind(out.pm.brfss0, out) 
 }
 
-save(out.pm.brfss0, 
-     file = here('output', 'analysis', 'out-pm-brfss0-4.RDa'))
+save(out.pm.brfss0, file = here('output', 'analysis', 'out-pm-brfss0-4.RDa'))
 ```
 
 ```{r pm - brfss}
@@ -1030,8 +999,7 @@ for (Y in cuz7){
   out.pm.brfss <- rbind(out.pm.brfss, out) 
 }
 
-save(out.pm.brfss, 
-     file = here('output', 'analysis', 'out-pm-brfss-7.RDa'))
+save(out.pm.brfss, file = here('output', 'analysis', 'out-pm-brfss-7.RDa'))
 ```
 
 ```{r state + ses + pm - race - multi-level}
@@ -1060,8 +1028,7 @@ for (Y in cuz7){
   race.A <- rbind(race.A, out)
 }
 
-save(race.A, 
-     file = here('output', 'analysis', 'out-raceA-7.RDa'))
+save(race.A, file = here('output', 'analysis', 'out-raceA-7.RDa'))
 
 ### race Black
 dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "B") 
@@ -1086,8 +1053,7 @@ for (Y in cuz7){
   race.B <- rbind(race.B, out)
 }
 
-save(race.B, 
-     file = here('output', 'analysis', 'out-raceB-7.RDa'))
+save(race.B, file = here('output', 'analysis', 'out-raceB-7.RDa'))
 
 ### race Hispanic
 dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "H") 
@@ -1112,8 +1078,7 @@ for (Y in cuz3){
   race.H <- rbind(race.H, out)
 }
 
-save(race.H, 
-     file = here('output', 'analysis', 'out-raceH-3.RDa'))
+save(race.H, file = here('output', 'analysis', 'out-raceH-3.RDa'))
 
 ### race White
 dt.ndi.ozone.race$race <- relevel(dt.ndi.ozone.race$race, ref = "W") 
@@ -1138,11 +1103,8 @@ for (Y in cuz7){
   race.W <- rbind(race.W, out)
 }
 
-save(race.W, 
-     file = here('output', 'analysis', 'out-raceW-7.RDa'))
+save(race.W, file = here('output', 'analysis', 'out-raceW-7.RDa'))
 
 out.race <-na.omit(rbind(race.A, race.B, race.H, race.W))
-save(out.race, 
-     file = here('output', 'analysis', 'out-race.RDa'))
-
+save(out.race, file = here('output', 'analysis', 'out-race.RDa'))
 ```
